@@ -8,6 +8,7 @@ const api: Window['api'] = {
     open: (vaultPath: string) => ipcRenderer.invoke('vault:open', vaultPath)
   },
   recipes: {
+    list: () => ipcRenderer.invoke('recipes:list'),
     pickFiles: () => ipcRenderer.invoke('recipes:pickFiles'),
     ingest: (paths: string[]) => ipcRenderer.invoke('recipes:ingest', paths),
     onProgress: (cb: (p: IngestProgress) => void) => {
