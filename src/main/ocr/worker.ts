@@ -1,5 +1,6 @@
-import path from 'path'
+import fs from 'fs'
 import os from 'os'
+import path from 'path'
 import { app } from 'electron'
 import { createWorker } from 'tesseract.js'
 import type { Worker } from 'tesseract.js'
@@ -16,10 +17,12 @@ let pool: PoolEntry[] = []
 let initPromise: Promise<void> | null = null
 
 async function buildPool(): Promise<void> {
-  const langPath = path.join(app.getPath('userData'), 'tessdata')
+  // cachePath = local storage for .traineddata files; langPath defaults to HTTPS for downloading
+  const cachePath = path.join(app.getPath('userData'), 'tessdata')
+  fs.mkdirSync(cachePath, { recursive: true })
   pool = await Promise.all(
     Array.from({ length: POOL_SIZE }, async () => {
-      const worker = await createWorker({ langPath, cacheMethod: 'readWrite' })
+      const worker = await createWorker({ cachePath, cacheMethod: 'readWrite' })
       await worker.loadLanguage(LANG)
       await worker.initialize(LANG)
       return { worker, busy: false }
