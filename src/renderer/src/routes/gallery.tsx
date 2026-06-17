@@ -49,7 +49,7 @@ function RecipeCard({ item }: { item: RecipeSummary }): React.JSX.Element {
   return (
     <div className="group relative flex-1 overflow-hidden rounded-xl bg-stone-100">
       <img
-        src={`recipe-thumb://${item.id}`}
+        src={`recipe-thumb://thumb/${item.id}`}
         alt={item.title ?? ''}
         draggable={false}
         className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"

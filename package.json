@@ -16,7 +16,8 @@
     "postinstall": "electron-rebuild -f -w better-sqlite3,sharp",
     "pretest": "npm rebuild better-sqlite3",
     "posttest": "electron-rebuild -f -w better-sqlite3,sharp",
-    "rebuild:electron": "electron-rebuild -f -w better-sqlite3,sharp"
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3,sharp",
+    "clear-data": "node scripts/clear-data.mjs"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^3.0.0",

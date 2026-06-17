@@ -43,6 +43,12 @@ class VaultManager {
     await fs.mkdir(path.join(vaultPath, 'pictures'), { recursive: true })
     await fs.mkdir(path.join(vaultPath, 'thumbs'), { recursive: true })
 
+    await this.persistConfig(vaultPath)
+
+    const db = initDb(vaultPath)
+    await seedFromFile(db)
+    await reconcile(db, vaultPath)
+
     this.current = {
       path: vaultPath,
       schemaVersion: vaultJson.schemaVersion,
@@ -50,12 +56,6 @@ class VaultManager {
       appVersion: vaultJson.appVersion,
       isNew
     }
-
-    await this.persistConfig(vaultPath)
-
-    const db = initDb(vaultPath)
-    await seedFromFile(db)
-    await reconcile(db, vaultPath)
 
     return this.current
   }
