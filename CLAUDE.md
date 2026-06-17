@@ -1,0 +1,138 @@
+# CLAUDE.md
+
+Guidance for future Claude Code sessions working in this repo. Read `docs/SPECS.md` and `docs/IMPLEMENTATION_PLAN.md` for the full picture; this file is the quick orientation.
+
+## What this is
+
+**Meal Planner** — a local-first Electron + React + Tailwind desktop app. Users add recipes as photos; the app OCRs them, **auto-extracts tags** from a curated Russian-first dictionary, and offers tag-based search via a multi-select combobox.
+
+No server, no accounts, no telemetry. Everything lives in the vault folder the user picks on first run. **Russian-first**: OCR defaults to `rus+eng`, tag library and matching are morphology-aware (Snowball Russian stemmer).
+
+## Stack at a glance
+
+- **Electron** (main + preload + renderer, strict isolation)
+- **React 19 + TypeScript**, **Tailwind v4**, Radix primitives, lucide icons
+- **[electron-vite](https://electron-vite.org/)** for the build (main / preload / renderer all bundled via Vite)
+- **better-sqlite3** — relational storage for recipes, tags, aliases, recipe_tags
+- **tesseract.js** for OCR (worker pool in main, default `rus+eng`)
+- **`natural`** (`PorterStemmerRu`) for Russian stemming; `Intl.Segmenter` for Unicode word boundaries
+- **`js-yaml`** for parsing the bundled `resources/seed-tags.yaml`
+- **sharp** for thumbnails and image dimensions
+- **Zustand** for renderer state, **React Router** for screens
+- **@tanstack/react-virtual** for the gallery grid
+
+## Repo layout (target — see IMPLEMENTATION_PLAN §1)
+
+```
+src/
+  main/      # Electron main: IPC, DB, OCR, ingestion, vault management
+  preload/   # contextBridge → window.api
+  renderer/  # React UI (gallery, detail, settings, first-run)
+docs/        # SPECS.md, IMPLEMENTATION_PLAN.md
+```
+
+The renderer never touches `fs`, `path`, sqlite, or `child_process`. All side effects go through IPC.
+
+## Commands (once Phase 1 is bootstrapped)
+
+```bash
+npm run dev         # electron-vite dev with HMR
+npm run build       # type-check + bundle
+npm run typecheck   # tsc --noEmit
+npm run lint        # eslint
+npm run test        # vitest
+npm run dist        # electron-builder, current platform
+```
+
+Until Phase 1 lands, `package.json` is a stub — don't run scripts expecting them to exist.
+
+## Conventions
+
+- **TypeScript everywhere**; no `.js` in `src/`.
+- **IPC is the only main↔renderer channel**. Add new handlers in `src/main/ipc/<domain>.ts` and mirror the type in `src/preload/api.d.ts`. Renderer imports the typed `window.api` only.
+- **Electron security non-negotiables**: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true` for the renderer, CSP header set in the main window. Never relax these without a written justification.
+- **DB writes go through prepared statements**, wrapped in a transaction when touching > 1 row.
+- **Vault paths**: never persist absolute paths inside `recipes` rows — store the id/ext and reconstruct paths from the current vault root. (Survives folder-rename and OS-reinstall.)
+- **No comments narrating WHAT** — code names should carry that. Comment WHY only when it's non-obvious.
+
+## Data flow cheatsheet
+
+1. User drops images on the gallery → renderer collects paths → `window.api.recipes.ingest(paths)`.
+2. Main ingestion pipeline: hash → dedupe → copy to `pictures/` → thumb to `thumbs/` → OCR → **`tags/matcher.ts` extracts tag IDs** → INSERT `recipes` + `recipe_tags` → emit `ingest:progress`.
+3. Renderer listens for `ingest:progress`, `vault:changed`, `tags:changed` to refresh the relevant stores.
+4. Search: user types in the `TagCombobox` → IPC `tags.suggest(prefix)` returns canonical tags (label only, never aliases) → user picks tags → `useTagFilterStore` holds selected IDs → IPC `recipes.filterByTags(ids, mode)` returns the filtered gallery. **AND is the default** mode; OR is a toggle.
+
+## Tag search (SPECS §7)
+
+- Tags are first-class. `tags` rows are canonical concepts (one label per concept); `tag_aliases` rows are all the recognized forms (lemmas) that resolve to a tag.
+- **The dropdown shows only `tags.label`** — alias matches are silent. Typing `том` returns `Помидор` because `томат` is an alias, but the user never sees the word `томат` in the dropdown.
+- All normalization (lowercase, NFC, ё→е, `Intl.Segmenter` word split, `PorterStemmerRu` stem) goes through **one** module: `src/main/tags/normalize.ts`. Do not duplicate this logic — every code path that handles Russian text for matching must call it.
+- Multi-word ingredients (`оливковое масло`, `болгарский перец`) are stored as space-joined stems in `tag_aliases.lemma`. The ingest matcher scans 1–3-token sliding windows over the stemmed OCR stream.
+- **No FTS5 in v1.** `ocr_text` is retained on `recipes` for display and the v2 free-text feature.
+
+## What lives where in the vault
+
+```
+<vault>/meal-planner.db        # SQLite (with -wal/-shm in WAL mode)
+<vault>/pictures/<id>.<ext>    # originals (id = nanoid(12))
+<vault>/thumbs/<id>.webp       # 512px webp thumbs
+<vault>/vault.json             # { schemaVersion, createdAt, appVersion }
+```
+
+The `vault.json` `schemaVersion` is the source of truth for migrations — bump it in `main/db/migrations.ts` when you change the schema.
+
+## Schema cheatsheet (SPECS §6)
+
+- `recipes` — one row per recipe; holds `ocr_text` (display + v2), `sha256` (dedupe), and metadata.
+- `tags` — canonical concepts. `label` is the UI text. `kind` ∈ `ingredient | dish_type | cuisine | user`. `source` ∈ `builtin | user`. Built-in rows are flagged `disabled`, never deleted.
+- `tag_aliases` — every recognized form (already stemmed) that resolves to a tag. `is_primary=1` for the one that matches the canonical label. Multi-word aliases stored as space-joined stems.
+- `recipe_tags` — M:N. `source` ∈ `ocr | user`. `confidence` is normalized occurrence weight at ingest (1.0 for user-set).
+- `recipe_tag_suppressions` — per-recipe "don't re-add this OCR tag on re-OCR." Written when a user removes an OCR-extracted chip.
+
+Seed re-application on upgrade is **strictly additive**: insert missing built-in slugs/aliases; never overwrite, delete, or re-enable user-disabled rows.
+
+## Common pitfalls to avoid
+
+- **Don't import `better-sqlite3` or `sharp` in the renderer** — they're native modules and only work in main. The renderer will compile fine and crash at runtime.
+- **Don't use `file://` URLs** for thumbnails — register a custom protocol (`recipe-thumb://<id>`) in main so the renderer's strict CSP and origin rules don't fight you.
+- **Don't block the main event loop** with synchronous OCR — use the tesseract.js worker pool.
+- **Don't trust paths from the renderer**. Every IPC handler that takes a path validates it stays within the current vault root.
+- **Don't store user OCR-text edits as part of `ocr_text`** if you want "Re-run OCR" to be non-destructive — keep `ocr_text` (machine) separate from `notes` (human). Current schema follows this.
+- **Don't show alias surface forms in the UI.** The dropdown, the chips, the tag library — all display `tags.label`. Aliases are an implementation detail of matching. (See SPECS §3.4 FR-S2.)
+- **Don't write a second Russian normalizer.** Every code path that compares Russian text against the tag library must go through `src/main/tags/normalize.ts`. Duplicating the rules (a stemmer call here, a `ё→е` there) silently breaks recall.
+- **Don't delete built-in tags or aliases on seed re-apply.** Only insert missing ones; respect `disabled` flags. User trust depends on this.
+
+## When making changes
+
+- Schema change → bump `schemaVersion` in `vault.json`, add a migration, write a test that runs old → new on a fixture vault.
+- New IPC handler → add to `preload/api.d.ts`, validate inputs, write a Vitest unit for the main-side handler.
+- New UI screen → add a route, lazy-load it, follow the existing Tailwind + Radix patterns.
+- Touching `tags/normalize.ts` → assume **every existing alias and recipe tag becomes stale**. Add a migration that re-normalizes `tag_aliases.lemma` and triggers a re-tag run, or leave the algorithm alone.
+- Adding to `resources/seed-tags.yaml` → add slug + canonical label + aliases (raw surface forms; the seed loader stems them). Pick a stable slug; aliases can change, slug cannot.
+
+## Status
+
+**Phase 2 complete.** Vault lifecycle is fully wired.
+
+- Cold start with no config → First Run screen (folder picker).
+- Pick empty folder → `vault.json` + `pictures/` + `thumbs/` created, config saved to `userData/config.json`, navigates to Gallery.
+- Restart → vault loaded from config, navigates directly to Gallery.
+- Pick existing Meal Planner folder → adopted cleanly (subdirs ensured, VaultInfo returned).
+- Gallery has a "Switch vault" link that re-opens the picker.
+
+All scripts pass: `typecheck`, `lint`, `build` (main 4.6 kB, preload 0.6 kB, renderer 781 kB + 10 kB CSS).
+
+Next: **Phase 3** — DB schema, migrations, tag seed, reconciliation.
+
+## Gotchas found in Phase 1
+
+- `@electron-toolkit/tsconfig/tsconfig.node.json` uses `moduleResolution: node` but `@tailwindcss/vite` ships `.d.mts`. Override with `"moduleResolution": "bundler"` in `tsconfig.node.json`. Already done.
+- `@electron-toolkit/eslint-config-ts` and `@electron-toolkit/eslint-config-prettier` are legacy `.eslintrc` format — not usable in ESLint 9 flat config. Replaced with `typescript-eslint` v8 meta-package + `eslint-plugin-react` + `eslint-plugin-react-hooks`. See `eslint.config.mjs`.
+- React 19 removed the global `JSX` namespace. Use `React.JSX.Element` for explicit return types (or omit the return type and let TypeScript infer). Already applied to `App.tsx`.
+
+## Gotchas found in Phase 2
+
+- `src/shared/api.d.ts` and `src/preload/index.d.ts` must both end with `export {}` to be treated as modules, making `declare global { interface Window { ... } }` a proper ambient augmentation.
+- The node tsconfig has no DOM lib, so `Window.electron` is not visible in the preload's `else` branch (non-`contextIsolation` fallback). One `@ts-expect-error` on that line is correct and intentional — do not remove it.
+- `@ts-expect-error` (unlike `@ts-ignore`) causes a compile error if the suppressed line has NO type error. Use `@ts-ignore` only to silence; use `@ts-expect-error` when you want TypeScript to enforce that the line IS erroneous.
+- **Do NOT import `@electron-toolkit/preload` in the preload script.** It is listed in `dependencies` and gets externalized by `externalizeDepsPlugin`, which means the bundled preload tries `require('@electron-toolkit/preload')` at runtime. In `sandbox: true` mode, `require` of npm packages fails silently inside a `try/catch`, leaving `window.api` undefined in the renderer. The preload only imports `contextBridge` and `ipcRenderer` from `'electron'` — both are always available as Electron built-ins.
