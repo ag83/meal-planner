@@ -9,6 +9,8 @@ const api: Window['api'] = {
   },
   recipes: {
     list: () => ipcRenderer.invoke('recipes:list'),
+    filterByTags: (tagIds: number[], mode: 'and' | 'or') =>
+      ipcRenderer.invoke('recipes:filterByTags', tagIds, mode),
     pickFiles: () => ipcRenderer.invoke('recipes:pickFiles'),
     ingest: (paths: string[]) => ipcRenderer.invoke('recipes:ingest', paths),
     onProgress: (cb: (p: IngestProgress) => void) => {
@@ -16,6 +18,10 @@ const api: Window['api'] = {
       ipcRenderer.on('ingest:progress', handler)
       return () => ipcRenderer.removeListener('ingest:progress', handler)
     }
+  },
+  tags: {
+    suggest: (prefix: string, limit?: number) =>
+      ipcRenderer.invoke('tags:suggest', prefix, limit)
   }
 }
 

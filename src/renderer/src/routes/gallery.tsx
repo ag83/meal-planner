@@ -8,6 +8,8 @@ import React, {
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { vault, recipes } from '../lib/ipc'
 import { useRecipesStore } from '../stores/useRecipesStore'
+import { useTagFilterStore } from '../stores/useTagFilterStore'
+import { TagCombobox } from '../components/TagCombobox'
 import type { IngestProgress, IngestStatus, RecipeSummary } from '../../../shared/types'
 
 // Electron sets `.path` on File objects from drag-and-drop
@@ -84,6 +86,7 @@ const GAP = 8
 
 export default function Gallery(): React.JSX.Element {
   const store = useRecipesStore()
+  const tagFilter = useTagFilterStore()
 
   // Vault tracking — reload recipes when the active vault changes
   const [vaultPath, setVaultPath] = useState<string | null>(null)
@@ -94,16 +97,36 @@ export default function Gallery(): React.JSX.Element {
 
   useEffect(() => {
     if (vaultPath !== null) store.load()
-  }, [vaultPath])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [vaultPath]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tag-filtered results
+  const [filteredItems, setFilteredItems] = useState<RecipeSummary[]>([])
+  const [filterLoading, setFilterLoading] = useState(false)
+
+  useEffect(() => {
+    if (tagFilter.selectedTags.length === 0) {
+      setFilteredItems([])
+      return
+    }
+    setFilterLoading(true)
+    recipes
+      .filterByTags(
+        tagFilter.selectedTags.map((t) => t.id),
+        tagFilter.mode
+      )
+      .then(setFilteredItems)
+      .catch(() => setFilteredItems([]))
+      .finally(() => setFilterLoading(false))
+  }, [tagFilter.selectedTags, tagFilter.mode])
+
+  const baseItems = tagFilter.selectedTags.length > 0 ? filteredItems : store.items
+  const isLoading = store.loading || filterLoading
 
   // Sort
   const [sort, setSort] = useState<SortKey>('newest')
-  const sortedItems = useMemo(
-    () => sortItems(store.items, sort),
-    [store.items, sort]
-  )
+  const sortedItems = useMemo(() => sortItems(baseItems, sort), [baseItems, sort])
 
-  // Virtual grid ─ responsive column count via ResizeObserver
+  // Virtual grid — responsive column count via ResizeObserver
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(960)
@@ -205,6 +228,13 @@ export default function Gallery(): React.JSX.Element {
   const dupCount = progressItems.filter((i) => i.status === 'duplicate').length
   const errCount = progressItems.filter((i) => i.status === 'error').length
 
+  const selectedIds = useMemo(
+    () => new Set(tagFilter.selectedTags.map((t) => t.id)),
+    [tagFilter.selectedTags]
+  )
+
+  const totalCount = tagFilter.selectedTags.length > 0 ? filteredItems.length : store.items.length
+
   return (
     <div
       className="flex h-screen flex-col bg-stone-50"
@@ -227,9 +257,9 @@ export default function Gallery(): React.JSX.Element {
       <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-stone-200 px-5">
         <div className="flex items-center gap-3">
           <h1 className="text-base font-semibold text-stone-800">My Recipes</h1>
-          {store.items.length > 0 && (
+          {totalCount > 0 && (
             <span className="text-sm text-stone-400">
-              {store.items.length} recipe{store.items.length !== 1 ? 's' : ''}
+              {totalCount} recipe{totalCount !== 1 ? 's' : ''}
             </span>
           )}
         </div>
@@ -261,12 +291,71 @@ export default function Gallery(): React.JSX.Element {
         </div>
       </header>
 
+      {/* Tag filter bar */}
+      <div className="flex-shrink-0 border-b border-stone-200 bg-white px-5 py-2">
+        <div className="flex items-center gap-2">
+          <TagCombobox selectedIds={selectedIds} onSelect={tagFilter.addTag} />
+
+          {tagFilter.selectedTags.length >= 2 && (
+            <div className="flex flex-shrink-0 items-center rounded-lg border border-stone-200 text-xs">
+              <button
+                onClick={() => tagFilter.setMode('and')}
+                className={`rounded-l-lg px-2.5 py-1.5 font-medium transition-colors ${
+                  tagFilter.mode === 'and'
+                    ? 'bg-stone-800 text-white'
+                    : 'text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                AND
+              </button>
+              <button
+                onClick={() => tagFilter.setMode('or')}
+                className={`rounded-r-lg px-2.5 py-1.5 font-medium transition-colors ${
+                  tagFilter.mode === 'or'
+                    ? 'bg-stone-800 text-white'
+                    : 'text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                OR
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Selected tag pills */}
+        {tagFilter.selectedTags.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {tagFilter.selectedTags.map((tag) => (
+              <span
+                key={tag.id}
+                className="flex items-center gap-1 rounded-full bg-stone-800 px-2.5 py-0.5 text-xs font-medium text-white"
+              >
+                {tag.label}
+                <button
+                  onClick={() => tagFilter.removeTag(tag.id)}
+                  className="ml-0.5 opacity-70 hover:opacity-100"
+                  aria-label={`Remove ${tag.label}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <button
+              onClick={tagFilter.clear}
+              className="text-xs text-stone-400 hover:text-stone-600"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Main area */}
       <div ref={containerRef} className="relative flex-1 overflow-hidden">
         {/* Scroll container */}
         <div ref={scrollRef} className="h-full overflow-y-auto px-5 py-4">
           {/* Empty state */}
-          {!store.loading && store.items.length === 0 && (
+          {!isLoading && sortedItems.length === 0 && store.items.length === 0 && (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-stone-100">
                 <svg
@@ -292,15 +381,28 @@ export default function Gallery(): React.JSX.Element {
             </div>
           )}
 
+          {/* No results for current filter */}
+          {!isLoading && sortedItems.length === 0 && store.items.length > 0 && (
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+              <p className="text-stone-500">No recipes match the selected tags</p>
+              <button
+                onClick={tagFilter.clear}
+                className="text-xs text-stone-400 underline underline-offset-2 hover:text-stone-600"
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
+
           {/* Loading skeleton */}
-          {store.loading && (
+          {isLoading && (
             <div className="flex h-40 items-center justify-center">
               <span className="text-sm text-stone-400">Loading…</span>
             </div>
           )}
 
           {/* Virtualized grid */}
-          {!store.loading && sortedItems.length > 0 && (
+          {!isLoading && sortedItems.length > 0 && (
             <div
               style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}
             >
@@ -351,7 +453,7 @@ export default function Gallery(): React.JSX.Element {
                 </button>
               )}
             </div>
-            <ul className="max-h-56 overflow-y-auto divide-y divide-stone-50">
+            <ul className="max-h-56 divide-y divide-stone-50 overflow-y-auto">
               {progressItems.map((item) => (
                 <li
                   key={item.filePath}
