@@ -24,3 +24,13 @@ export interface IngestProgress {
   recipeId?: string
   error?: string
 }
+
+export interface RecipeSummary {
+  id: string
+  ext: string
+  title: string | null
+  width: number
+  height: number
+  createdAt: number
+  tagCount: number
+}

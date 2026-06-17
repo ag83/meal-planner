@@ -5,6 +5,24 @@ import { ingestFile } from '../ingest/pipeline'
 import type { IngestProgress } from '../../shared/types'
 
 export function registerRecipeHandlers(): void {
+  ipcMain.handle('recipes:list', () => {
+    if (!vaultManager.getCurrent()) return []
+    const db = getDb()
+    return db
+      .prepare(`
+        SELECT r.id, r.ext, r.title,
+               r.width, r.height,
+               r.created_at AS createdAt,
+               COUNT(rt.tag_id) AS tagCount
+        FROM recipes r
+        LEFT JOIN recipe_tags rt ON rt.recipe_id = r.id
+        WHERE r.missing = 0
+        GROUP BY r.id
+        ORDER BY r.created_at DESC
+      `)
+      .all()
+  })
+
   ipcMain.handle('recipes:pickFiles', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     const { canceled, filePaths } = await dialog.showOpenDialog(win!, {

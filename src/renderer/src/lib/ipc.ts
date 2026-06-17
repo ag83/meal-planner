@@ -1,5 +1,5 @@
 // Typed facade over window.api — import this instead of calling window.api directly.
-import type { VaultInfo, IngestProgress } from '../../../shared/types'
+import type { VaultInfo, IngestProgress, RecipeSummary } from '../../../shared/types'
 
 export const vault = {
   getCurrent: (): Promise<VaultInfo | null> => window.api.vault.getCurrent(),
@@ -8,6 +8,7 @@ export const vault = {
 }
 
 export const recipes = {
+  list: (): Promise<RecipeSummary[]> => window.api.recipes.list(),
   pickFiles: (): Promise<string[]> => window.api.recipes.pickFiles(),
   ingest: (paths: string[]): Promise<void> => window.api.recipes.ingest(paths),
   onProgress: (cb: (p: IngestProgress) => void): (() => void) =>

@@ -1,10 +1,16 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerVaultHandlers } from './ipc/vault'
 import { registerRecipeHandlers } from './ipc/recipes'
+import { registerThumbProtocol } from './protocol/thumb'
 import { vaultManager } from './vault/manager'
 import { terminateOcrPool } from './ocr/worker'
+
+// Must be called before app.whenReady()
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'recipe-thumb', privileges: { secure: true, standard: true, supportFetchAPI: true } }
+])
 
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
@@ -45,6 +51,7 @@ app.whenReady().then(async () => {
   // first getCurrent() call always finds them.
   registerVaultHandlers()
   registerRecipeHandlers()
+  registerThumbProtocol()
 
   // Pre-load vault from persisted config. If this fails the renderer's
   // getCurrent() returns null and the first-run screen is shown.
