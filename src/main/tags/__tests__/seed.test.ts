@@ -77,7 +77,7 @@ describe('seedFromEntries', () => {
     seedFromEntries(db, entries)
 
     const aliases = db
-      .prepare<[], { lemma: string }>('SELECT lemma FROM tag_aliases WHERE tag_id = (SELECT id FROM tags WHERE slug = ?)')
+      .prepare<[string], { lemma: string }>('SELECT lemma FROM tag_aliases WHERE tag_id = (SELECT id FROM tags WHERE slug = ?)')
       .all('tomato')
     const lemmas = aliases.map((r) => r.lemma)
     // No duplicate lemma strings
@@ -87,7 +87,7 @@ describe('seedFromEntries', () => {
   it('marks primary alias correctly', () => {
     seedFromEntries(db, [ENTRIES[0]])
     const primary = db
-      .prepare<[], { lemma: string; is_primary: number }>(
+      .prepare<[string], { lemma: string; is_primary: number }>(
         'SELECT lemma, is_primary FROM tag_aliases WHERE tag_id = (SELECT id FROM tags WHERE slug = ?) AND is_primary = 1'
       )
       .all('tomato')

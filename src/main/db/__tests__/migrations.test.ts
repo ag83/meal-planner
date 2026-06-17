@@ -68,7 +68,7 @@ describe('runMigrations', () => {
     db.prepare(
       `INSERT INTO tags (slug, label, kind, source, created_at) VALUES ('t1','T','ingredient','builtin',1)`
     ).run()
-    const tagRow = db.prepare<[], { id: number }>('SELECT id FROM tags WHERE slug=?').get('t1')!
+    const tagRow = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('t1')!
     db.prepare(
       `INSERT INTO recipe_tags (recipe_id, tag_id, confidence, source) VALUES ('r1',${tagRow.id},1.0,'user')`
     ).run()

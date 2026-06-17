@@ -12,7 +12,11 @@
       "Bash(./node_modules/.bin/electron-rebuild -f -w better-sqlite3)",
       "Bash(grep -E \"^natural$|^js-yaml$\")",
       "Bash(npm rebuild *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(git commit -m ' *)",
+      "Bash(electron-rebuild -f -w sharp)",
+      "Bash(npx electron-rebuild *)",
+      "Bash(git add *)"
     ]
   }
 }
