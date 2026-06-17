@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(npm ls *)",
+      "Bash(npm run *)",
+      "Bash(node -e \"const c = require\\('./node_modules/@electron-toolkit/eslint-config-ts/index.js'\\); console.log\\(typeof c, Array.isArray\\(c\\), Object.keys\\(c\\).slice\\(0,5\\)\\)\")",
+      "Bash(node *)",
+      "Bash(npm uninstall *)",
+      "Bash(where cl *)",
+      "Bash(./node_modules/.bin/electron-rebuild -f -w better-sqlite3)",
+      "Bash(grep -E \"^natural$|^js-yaml$\")",
+      "Bash(npm rebuild *)",
+      "Bash(npx vitest *)"
+    ]
+  }
+}

@@ -1,0 +1,508 @@
+# Canonical tag seed data for Meal Planner
+# kind: ingredient | dish_type | cuisine
+# aliases: alternative surface forms (Russian); the primary label is always included automatically.
+
+# ── Ingredients ─────────────────────────────────────────────────────────────
+
+- slug: tomato
+  label: Помидор
+  kind: ingredient
+  aliases:
+    - помидоры
+    - томат
+    - томаты
+    - томатик
+    - помидорчик
+
+- slug: cucumber
+  label: Огурец
+  kind: ingredient
+  aliases:
+    - огурцы
+    - огурчик
+    - огурчики
+
+- slug: potato
+  label: Картофель
+  kind: ingredient
+  aliases:
+    - картошка
+    - картофан
+    - картошечка
+    - картоха
+
+- slug: onion
+  label: Лук
+  kind: ingredient
+  aliases:
+    - луковица
+    - лучок
+    - репчатый лук
+    - лук репчатый
+
+- slug: garlic
+  label: Чеснок
+  kind: ingredient
+  aliases:
+    - чесночок
+    - чесночная головка
+    - зубчик чеснока
+
+- slug: carrot
+  label: Морковь
+  kind: ingredient
+  aliases:
+    - морковка
+    - морковочка
+    - морковь свежая
+
+- slug: cabbage
+  label: Капуста
+  kind: ingredient
+  aliases:
+    - капустка
+    - белокочанная капуста
+    - белокочанная
+
+- slug: bell_pepper
+  label: Болгарский перец
+  kind: ingredient
+  aliases:
+    - перец болгарский
+    - сладкий перец
+    - перец сладкий
+    - перец
+
+- slug: eggplant
+  label: Баклажан
+  kind: ingredient
+  aliases:
+    - баклажаны
+    - синенькие
+    - баклажанчик
+
+- slug: zucchini
+  label: Кабачок
+  kind: ingredient
+  aliases:
+    - кабачки
+    - цукини
+    - кабачочек
+
+- slug: beet
+  label: Свёкла
+  kind: ingredient
+  aliases:
+    - свекла
+    - свёклочка
+    - свекольник
+
+- slug: spinach
+  label: Шпинат
+  kind: ingredient
+  aliases:
+    - шпинатные листья
+    - листья шпината
+
+- slug: mushroom
+  label: Грибы
+  kind: ingredient
+  aliases:
+    - гриб
+    - грибочки
+    - грибы лесные
+    - шампиньон
+    - шампиньоны
+    - вешенки
+    - вешенка
+    - белые грибы
+    - белый гриб
+
+- slug: chicken
+  label: Курица
+  kind: ingredient
+  aliases:
+    - куриное мясо
+    - курятина
+    - куриная грудка
+    - грудка куриная
+    - куриное филе
+    - филе курицы
+    - бедро куриное
+    - куриные бёдра
+
+- slug: beef
+  label: Говядина
+  kind: ingredient
+  aliases:
+    - говяжье мясо
+    - телятина
+    - говяжья вырезка
+    - вырезка говяжья
+
+- slug: pork
+  label: Свинина
+  kind: ingredient
+  aliases:
+    - свиное мясо
+    - свиная шея
+    - шея свиная
+    - свиная корейка
+    - окорок свиной
+
+- slug: minced_meat
+  label: Фарш
+  kind: ingredient
+  aliases:
+    - мясной фарш
+    - фарш куриный
+    - фарш говяжий
+    - фарш свиной
+    - фарш смешанный
+
+- slug: fish
+  label: Рыба
+  kind: ingredient
+  aliases:
+    - рыбка
+    - рыбное филе
+    - филе рыбы
+    - горбуша
+    - сёмга
+    - семга
+    - лосось
+    - скумбрия
+    - треска
+    - минтай
+    - судак
+    - карп
+
+- slug: shrimp
+  label: Креветки
+  kind: ingredient
+  aliases:
+    - креветка
+    - тигровые креветки
+    - королевские креветки
+
+- slug: egg
+  label: Яйцо
+  kind: ingredient
+  aliases:
+    - яйца
+    - куриное яйцо
+    - яйца куриные
+    - яичко
+
+- slug: cheese
+  label: Сыр
+  kind: ingredient
+  aliases:
+    - сырок
+    - твёрдый сыр
+    - твердый сыр
+    - плавленый сыр
+    - моцарелла
+    - пармезан
+    - фета
+    - брынза
+    - голландский сыр
+    - российский сыр
+
+- slug: milk
+  label: Молоко
+  kind: ingredient
+  aliases:
+    - молочко
+    - цельное молоко
+    - обезжиренное молоко
+
+- slug: cream
+  label: Сливки
+  kind: ingredient
+  aliases:
+    - сливки 33%
+    - сливки 20%
+    - жирные сливки
+    - нежирные сливки
+
+- slug: sour_cream
+  label: Сметана
+  kind: ingredient
+  aliases:
+    - сметанка
+    - сметана 20%
+    - жирная сметана
+
+- slug: butter
+  label: Сливочное масло
+  kind: ingredient
+  aliases:
+    - масло сливочное
+    - масло
+    - маслице
+
+- slug: oil
+  label: Растительное масло
+  kind: ingredient
+  aliases:
+    - масло растительное
+    - масло подсолнечное
+    - подсолнечное масло
+    - масло оливковое
+    - оливковое масло
+
+- slug: flour
+  label: Мука
+  kind: ingredient
+  aliases:
+    - мука пшеничная
+    - пшеничная мука
+    - мука высшего сорта
+
+- slug: sugar
+  label: Сахар
+  kind: ingredient
+  aliases:
+    - сахарный песок
+    - сахарок
+    - сахар белый
+
+- slug: salt
+  label: Соль
+  kind: ingredient
+  aliases:
+    - поваренная соль
+    - морская соль
+    - крупная соль
+
+- slug: rice
+  label: Рис
+  kind: ingredient
+  aliases:
+    - рисик
+    - длиннозёрный рис
+    - круглый рис
+    - рис басмати
+    - басмати
+
+- slug: pasta
+  label: Макароны
+  kind: ingredient
+  aliases:
+    - макаронные изделия
+    - спагетти
+    - паста
+    - пенне
+    - фарфалле
+    - тальятелле
+    - лингвине
+    - фетучини
+
+- slug: bread
+  label: Хлеб
+  kind: ingredient
+  aliases:
+    - буханка
+    - батон
+    - белый хлеб
+    - чёрный хлеб
+    - ржаной хлеб
+    - хлебушек
+
+- slug: apple
+  label: Яблоко
+  kind: ingredient
+  aliases:
+    - яблоки
+    - яблочко
+    - яблоко зелёное
+    - яблоко красное
+
+- slug: lemon
+  label: Лимон
+  kind: ingredient
+  aliases:
+    - лимоны
+    - лимончик
+    - лимонный сок
+    - сок лимона
+
+- slug: dill
+  label: Укроп
+  kind: ingredient
+  aliases:
+    - укропчик
+    - зелень укропа
+    - свежий укроп
+
+- slug: parsley
+  label: Петрушка
+  kind: ingredient
+  aliases:
+    - петрушечка
+    - зелень петрушки
+    - свежая петрушка
+
+# ── Dish types ───────────────────────────────────────────────────────────────
+
+- slug: soup
+  label: Суп
+  kind: dish_type
+  aliases:
+    - супчик
+    - первое блюдо
+    - первое
+    - бульон
+
+- slug: salad
+  label: Салат
+  kind: dish_type
+  aliases:
+    - салатик
+    - закуска
+    - закусочный салат
+
+- slug: main_course
+  label: Второе блюдо
+  kind: dish_type
+  aliases:
+    - горячее
+    - основное блюдо
+    - горячее блюдо
+    - второе
+
+- slug: side_dish
+  label: Гарнир
+  kind: dish_type
+  aliases:
+    - гарнирчик
+    - гарнир к мясу
+    - гарнир к рыбе
+
+- slug: appetizer
+  label: Закуска
+  kind: dish_type
+  aliases:
+    - закусочки
+    - холодная закуска
+    - горячая закуска
+
+- slug: dessert
+  label: Десерт
+  kind: dish_type
+  aliases:
+    - сладкое
+    - сладость
+    - выпечка сладкая
+    - торт
+    - пирожное
+    - печенье
+    - кекс
+
+- slug: pastry
+  label: Выпечка
+  kind: dish_type
+  aliases:
+    - пирог
+    - пироги
+    - пирожки
+    - блины
+    - блин
+    - оладьи
+    - оладушки
+    - булочки
+    - хлеб домашний
+    - хлебопечка
+
+- slug: sauce
+  label: Соус
+  kind: dish_type
+  aliases:
+    - подлива
+    - заправка
+    - маринад
+    - соусик
+
+- slug: drink
+  label: Напиток
+  kind: dish_type
+  aliases:
+    - напиточек
+    - коктейль
+    - смузи
+    - компот
+    - морс
+    - кисель
+
+- slug: breakfast
+  label: Завтрак
+  kind: dish_type
+  aliases:
+    - утреннее блюдо
+    - завтрак быстрый
+    - завтрак полезный
+
+# ── Cuisines ─────────────────────────────────────────────────────────────────
+
+- slug: russian
+  label: Русская кухня
+  kind: cuisine
+  aliases:
+    - русское блюдо
+    - русская еда
+    - традиционная русская кухня
+    - народная кухня
+
+- slug: italian
+  label: Итальянская кухня
+  kind: cuisine
+  aliases:
+    - итальянское блюдо
+    - итальянская еда
+    - паста итальянская
+    - пицца
+
+- slug: georgian
+  label: Грузинская кухня
+  kind: cuisine
+  aliases:
+    - грузинское блюдо
+    - грузинская еда
+    - кавказская кухня
+
+- slug: uzbek
+  label: Узбекская кухня
+  kind: cuisine
+  aliases:
+    - узбекское блюдо
+    - средняя азия
+    - азиатская кухня
+    - плов
+
+- slug: asian
+  label: Азиатская кухня
+  kind: cuisine
+  aliases:
+    - китайская кухня
+    - японская кухня
+    - корейская кухня
+    - тайская кухня
+    - паназиатская кухня
+
+- slug: mediterranean
+  label: Средиземноморская кухня
+  kind: cuisine
+  aliases:
+    - греческая кухня
+    - испанская кухня
+    - турецкая кухня
+    - средиземноморское блюдо
+
+- slug: french
+  label: Французская кухня
+  kind: cuisine
+  aliases:
+    - французское блюдо
+    - французская еда
+    - классическая французская кухня
