@@ -34,3 +34,12 @@ export interface RecipeSummary {
   createdAt: number
   tagCount: number
 }
+
+export type TagKind = 'ingredient' | 'dish_type' | 'cuisine' | 'user'
+
+export interface TagSuggestion {
+  id: number
+  label: string
+  kind: TagKind
+  recipeCount: number
+}

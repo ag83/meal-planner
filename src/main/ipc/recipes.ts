@@ -23,6 +23,49 @@ export function registerRecipeHandlers(): void {
       .all()
   })
 
+  ipcMain.handle('recipes:filterByTags', (_event, tagIds: unknown, mode: unknown) => {
+    if (!Array.isArray(tagIds) || tagIds.some((id) => typeof id !== 'number')) {
+      throw new Error('Invalid tagIds argument')
+    }
+    if (mode !== 'and' && mode !== 'or') throw new Error('Invalid mode')
+    if (!vaultManager.getCurrent()) return []
+
+    const db = getDb()
+    const ids = tagIds as number[]
+    if (ids.length === 0) return []
+
+    const ph = ids.map(() => '?').join(',')
+
+    if (mode === 'and') {
+      return db
+        .prepare(
+          `SELECT r.id, r.ext, r.title, r.width, r.height, r.created_at AS createdAt,
+                  (SELECT COUNT(*) FROM recipe_tags WHERE recipe_id = r.id) AS tagCount
+           FROM recipes r
+           WHERE r.missing = 0
+             AND r.id IN (
+               SELECT recipe_id FROM recipe_tags
+               WHERE tag_id IN (${ph})
+               GROUP BY recipe_id
+               HAVING COUNT(DISTINCT tag_id) = ?
+             )
+           ORDER BY r.created_at DESC`
+        )
+        .all([...ids, ids.length])
+    } else {
+      return db
+        .prepare(
+          `SELECT DISTINCT r.id, r.ext, r.title, r.width, r.height, r.created_at AS createdAt,
+                  (SELECT COUNT(*) FROM recipe_tags WHERE recipe_id = r.id) AS tagCount
+           FROM recipes r
+           JOIN recipe_tags rt ON rt.recipe_id = r.id
+           WHERE r.missing = 0 AND rt.tag_id IN (${ph})
+           ORDER BY r.created_at DESC`
+        )
+        .all(ids)
+    }
+  })
+
   ipcMain.handle('recipes:pickFiles', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     const { canceled, filePaths } = await dialog.showOpenDialog(win!, {
