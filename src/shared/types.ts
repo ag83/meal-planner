@@ -15,3 +15,12 @@ export interface VaultJson {
 export interface AppConfig {
   vaultPath: string | null
 }
+
+export type IngestStatus = 'hashing' | 'duplicate' | 'copying' | 'thumbnail' | 'ocr' | 'tagging' | 'done' | 'error'
+
+export interface IngestProgress {
+  filePath: string
+  status: IngestStatus
+  recipeId?: string
+  error?: string
+}

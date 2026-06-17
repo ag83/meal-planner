@@ -2,7 +2,9 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerVaultHandlers } from './ipc/vault'
+import { registerRecipeHandlers } from './ipc/recipes'
 import { vaultManager } from './vault/manager'
+import { terminateOcrPool } from './ocr/worker'
 
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
@@ -42,6 +44,7 @@ app.whenReady().then(async () => {
   // Register IPC handlers before the window is created so the renderer's
   // first getCurrent() call always finds them.
   registerVaultHandlers()
+  registerRecipeHandlers()
 
   // Pre-load vault from persisted config. If this fails the renderer's
   // getCurrent() returns null and the first-run screen is shown.
@@ -56,6 +59,10 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('before-quit', () => {
+  terminateOcrPool().catch(console.error)
 })
 
 app.on('window-all-closed', () => {
