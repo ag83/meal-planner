@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerVaultHandlers } from './ipc/vault'
 import { registerRecipeHandlers } from './ipc/recipes'
 import { registerTagHandlers } from './ipc/tags'
+import { registerSettingsHandlers } from './ipc/settings'
 import { registerThumbProtocol } from './protocol/thumb'
 import { vaultManager } from './vault/manager'
 import { terminateOcrPool } from './ocr/worker'
@@ -54,6 +55,7 @@ app.whenReady().then(async () => {
   registerVaultHandlers()
   registerRecipeHandlers()
   registerTagHandlers()
+  registerSettingsHandlers()
   registerThumbProtocol()
 
   // Pre-load vault from persisted config. If this fails the renderer's

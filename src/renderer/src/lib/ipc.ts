@@ -1,10 +1,20 @@
 // Typed facade over window.api — import this instead of calling window.api directly.
-import type { VaultInfo, IngestProgress, RecipeSummary, RecipeFull, TagSuggestion } from '../../../shared/types'
+import type {
+  VaultInfo,
+  IngestProgress,
+  RecipeSummary,
+  RecipeFull,
+  TagSuggestion,
+  TagWithAliases,
+  TagKind,
+  Settings
+} from '../../../shared/types'
 
 export const vault = {
   getCurrent: (): Promise<VaultInfo | null> => window.api.vault.getCurrent(),
   pick: (): Promise<VaultInfo | null> => window.api.vault.pick(),
-  open: (vaultPath: string): Promise<VaultInfo> => window.api.vault.open(vaultPath)
+  open: (vaultPath: string): Promise<VaultInfo> => window.api.vault.open(vaultPath),
+  openFolder: (): Promise<void> => window.api.vault.openFolder()
 }
 
 export const recipes = {
@@ -26,5 +36,22 @@ export const recipes = {
 
 export const tags = {
   suggest: (prefix: string, limit?: number): Promise<TagSuggestion[]> =>
-    window.api.tags.suggest(prefix, limit)
+    window.api.tags.suggest(prefix, limit),
+  list: (kind?: TagKind): Promise<TagWithAliases[]> => window.api.tags.list(kind),
+  create: (input: { label: string; kind: TagKind; aliases?: string[] }): Promise<number> =>
+    window.api.tags.create(input),
+  update: (
+    id: number,
+    patch: { label?: string; kind?: TagKind; disabled?: boolean }
+  ): Promise<void> => window.api.tags.update(id, patch),
+  addAlias: (tagId: number, surface: string): Promise<void> =>
+    window.api.tags.addAlias(tagId, surface),
+  removeAlias: (aliasId: number): Promise<void> => window.api.tags.removeAlias(aliasId),
+  delete: (id: number): Promise<void> => window.api.tags.delete(id),
+  retagAll: (): Promise<{ updated: number }> => window.api.tags.retagAll()
+}
+
+export const settings = {
+  get: (): Promise<Settings> => window.api.settings.get(),
+  update: (patch: Partial<Settings>): Promise<void> => window.api.settings.update(patch)
 }
