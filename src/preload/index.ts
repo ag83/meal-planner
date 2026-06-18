@@ -5,7 +5,8 @@ const api: Window['api'] = {
   vault: {
     getCurrent: () => ipcRenderer.invoke('vault:getCurrent'),
     pick: () => ipcRenderer.invoke('vault:pick'),
-    open: (vaultPath: string) => ipcRenderer.invoke('vault:open', vaultPath)
+    open: (vaultPath: string) => ipcRenderer.invoke('vault:open', vaultPath),
+    openFolder: () => ipcRenderer.invoke('vault:openFolder')
   },
   recipes: {
     list: () => ipcRenderer.invoke('recipes:list'),
@@ -28,7 +29,18 @@ const api: Window['api'] = {
   },
   tags: {
     suggest: (prefix: string, limit?: number) =>
-      ipcRenderer.invoke('tags:suggest', prefix, limit)
+      ipcRenderer.invoke('tags:suggest', prefix, limit),
+    list: (kind?) => ipcRenderer.invoke('tags:list', kind),
+    create: (input) => ipcRenderer.invoke('tags:create', input),
+    update: (id, patch) => ipcRenderer.invoke('tags:update', id, patch),
+    addAlias: (tagId, surface) => ipcRenderer.invoke('tags:addAlias', tagId, surface),
+    removeAlias: (aliasId) => ipcRenderer.invoke('tags:removeAlias', aliasId),
+    delete: (id) => ipcRenderer.invoke('tags:delete', id),
+    retagAll: () => ipcRenderer.invoke('tags:retagAll')
+  },
+  settings: {
+    get: () => ipcRenderer.invoke('settings:get'),
+    update: (patch) => ipcRenderer.invoke('settings:update', patch)
   }
 }
 

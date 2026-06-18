@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useCallback
 } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { vault, recipes } from '../lib/ipc'
 import { useRecipesStore } from '../stores/useRecipesStore'
@@ -89,6 +89,7 @@ const ITEM_H = 200
 const GAP = 8
 
 export default function Gallery(): React.JSX.Element {
+  const navigate = useNavigate()
   const store = useRecipesStore()
   const tagFilter = useTagFilterStore()
 
@@ -291,6 +292,12 @@ export default function Gallery(): React.JSX.Element {
             className="text-xs text-stone-400 underline underline-offset-2 hover:text-stone-600"
           >
             Switch vault
+          </button>
+          <button
+            onClick={() => navigate('/settings')}
+            className="text-xs text-stone-400 underline underline-offset-2 hover:text-stone-600"
+          >
+            Settings
           </button>
         </div>
       </header>

@@ -12,8 +12,12 @@ export interface VaultJson {
   appVersion: string
 }
 
+export type AppTheme = 'system' | 'light' | 'dark'
+
 export interface AppConfig {
   vaultPath: string | null
+  theme?: AppTheme
+  ocrLang?: string
 }
 
 export type IngestStatus = 'hashing' | 'duplicate' | 'copying' | 'thumbnail' | 'ocr' | 'tagging' | 'done' | 'error'
@@ -65,4 +69,28 @@ export interface RecipeFull {
   ocrLang: string | null
   ocrConf: number | null
   tags: RecipeTag[]
+}
+
+export interface TagAlias {
+  id: number
+  lemma: string
+  isPrimary: boolean
+  source: 'builtin' | 'user'
+  disabled: boolean
+}
+
+export interface TagWithAliases {
+  id: number
+  slug: string
+  label: string
+  kind: TagKind
+  source: 'builtin' | 'user'
+  disabled: boolean
+  recipeCount: number
+  aliases: TagAlias[]
+}
+
+export interface Settings {
+  theme: AppTheme
+  ocrLang: string
 }
