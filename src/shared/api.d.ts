@@ -1,6 +1,6 @@
 // Augments Window with the typed IPC surface exposed by the preload.
 // Included by both tsconfig.node.json (preload) and tsconfig.web.json (renderer).
-import type { VaultInfo, IngestProgress, RecipeSummary, TagSuggestion } from './types'
+import type { VaultInfo, IngestProgress, RecipeSummary, RecipeFull, TagSuggestion } from './types'
 
 declare global {
   interface Window {
@@ -13,6 +13,11 @@ declare global {
       recipes: {
         list(): Promise<RecipeSummary[]>
         filterByTags(tagIds: number[], mode: 'and' | 'or'): Promise<RecipeSummary[]>
+        get(id: string): Promise<RecipeFull | null>
+        update(id: string, patch: { title?: string | null; notes?: string | null }): Promise<void>
+        setTag(id: string, tagId: number, on: boolean): Promise<void>
+        reOcr(id: string, lang?: string): Promise<void>
+        delete(id: string): Promise<void>
         pickFiles(): Promise<string[]>
         ingest(paths: string[]): Promise<void>
         onProgress(cb: (p: IngestProgress) => void): () => void

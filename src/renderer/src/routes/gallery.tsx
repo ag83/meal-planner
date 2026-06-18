@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useCallback
 } from 'react'
+import { Link } from 'react-router-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { vault, recipes } from '../lib/ipc'
 import { useRecipesStore } from '../stores/useRecipesStore'
@@ -49,7 +50,10 @@ const STATUS_COLOR: Record<IngestStatus, string> = {
 
 function RecipeCard({ item }: { item: RecipeSummary }): React.JSX.Element {
   return (
-    <div className="group relative flex-1 overflow-hidden rounded-xl bg-stone-100">
+    <Link
+      to={`/recipe/${item.id}`}
+      className="group relative flex-1 overflow-hidden rounded-xl bg-stone-100"
+    >
       <img
         src={`recipe-thumb://thumb/${item.id}`}
         alt={item.title ?? ''}
@@ -63,7 +67,7 @@ function RecipeCard({ item }: { item: RecipeSummary }): React.JSX.Element {
           </span>
         </div>
       )}
-    </div>
+    </Link>
   )
 }
 

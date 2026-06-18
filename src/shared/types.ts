@@ -43,3 +43,26 @@ export interface TagSuggestion {
   kind: TagKind
   recipeCount: number
 }
+
+export interface RecipeTag {
+  tagId: number
+  label: string
+  kind: TagKind
+  source: 'ocr' | 'user'
+  confidence: number
+}
+
+export interface RecipeFull {
+  id: string
+  ext: string
+  title: string | null
+  notes: string | null
+  width: number
+  height: number
+  createdAt: number
+  updatedAt: number
+  ocrText: string | null
+  ocrLang: string | null
+  ocrConf: number | null
+  tags: RecipeTag[]
+}

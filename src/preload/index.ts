@@ -11,6 +11,13 @@ const api: Window['api'] = {
     list: () => ipcRenderer.invoke('recipes:list'),
     filterByTags: (tagIds: number[], mode: 'and' | 'or') =>
       ipcRenderer.invoke('recipes:filterByTags', tagIds, mode),
+    get: (id: string) => ipcRenderer.invoke('recipes:get', id),
+    update: (id: string, patch: { title?: string | null; notes?: string | null }) =>
+      ipcRenderer.invoke('recipes:update', id, patch),
+    setTag: (id: string, tagId: number, on: boolean) =>
+      ipcRenderer.invoke('recipes:setTag', id, tagId, on),
+    reOcr: (id: string, lang?: string) => ipcRenderer.invoke('recipes:reOcr', id, lang),
+    delete: (id: string) => ipcRenderer.invoke('recipes:delete', id),
     pickFiles: () => ipcRenderer.invoke('recipes:pickFiles'),
     ingest: (paths: string[]) => ipcRenderer.invoke('recipes:ingest', paths),
     onProgress: (cb: (p: IngestProgress) => void) => {
