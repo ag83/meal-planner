@@ -107,3 +107,35 @@ describe('honey, orange, cottage cheese and yeast', () => {
     expect(labelsFor('руки дрожат')).toEqual([])
   })
 })
+
+describe('кукуруза and гриль', () => {
+  it('matches кукуруза across cases', () => {
+    expect(labelsFor('банка кукурузы')).toEqual(['Кукуруза'])
+    expect(labelsFor('добавьте кукурузу')).toEqual(['Кукуруза'])
+    expect(labelsFor('консервированная кукуруза')).toEqual(['Кукуруза'])
+  })
+
+  it('matches the кукурузный adjective, which stems differently', () => {
+    expect(labelsFor('кукурузные зёрна')).toEqual(['Кукуруза'])
+  })
+
+  it('detects Гриль from шашлык', () => {
+    expect(labelsFor('шашлык из свинины')).toContain('Гриль')
+    expect(labelsFor('замариновать шашлыки')).toContain('Гриль')
+  })
+
+  it('detects Гриль from гриль', () => {
+    expect(labelsFor('гриль')).toEqual(['Гриль'])
+    expect(labelsFor('запечь на гриле')).toEqual(['Гриль'])
+  })
+
+  it('detects Гриль from мангал in both stem variants', () => {
+    expect(labelsFor('мангал')).toEqual(['Гриль'])
+    expect(labelsFor('жарить на мангале')).toEqual(['Гриль'])
+    expect(labelsFor('угли в мангале')).toEqual(['Гриль'])
+  })
+
+  it('reports Гриль once for a text using all three words', () => {
+    expect(labelsFor('шашлык на мангале или на гриле')).toEqual(['Гриль'])
+  })
+})
