@@ -102,6 +102,17 @@ const MIGRATIONS: Migration[] = [
 
       UPDATE tags SET disabled = 1 WHERE slug = 'sauce' AND source = 'builtin';
     `)
+  },
+  // v4 → v5: Чёрный перец retired for the same reason as Соль — near-universal in
+  // recipes, so it carries no filtering value.
+  (db) => {
+    db.exec(`
+      UPDATE tag_aliases SET disabled = 1
+        WHERE source = 'builtin'
+          AND tag_id = (SELECT id FROM tags WHERE slug = 'black_pepper');
+
+      UPDATE tags SET disabled = 1 WHERE slug = 'black_pepper' AND source = 'builtin';
+    `)
   }
 ]
 
