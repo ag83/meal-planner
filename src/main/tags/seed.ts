@@ -10,7 +10,13 @@ export interface SeedEntry {
   label: string
   kind: 'ingredient' | 'dish_type' | 'cuisine'
   aliases: string[]
+  exact_aliases?: string[]
 }
+
+// Exact aliases deliberately skip stemming — they exist for forms the stemmer
+// collapses wrongly. Mirrored by tokenize in tags/matcher.ts.
+const exactForm = (surface: string): string =>
+  surface.normalize('NFC').toLowerCase().replace(/ё/g, 'е').trim()
 
 // Additive upsert: inserts missing slugs/aliases; never overwrites or deletes user data.
 export const seedFromEntries = (db: Database.Database, entries: SeedEntry[]): void => {
@@ -21,8 +27,8 @@ export const seedFromEntries = (db: Database.Database, entries: SeedEntry[]): vo
   `)
 
   const insertAlias = db.prepare(`
-    INSERT INTO tag_aliases (tag_id, lemma, is_primary, source)
-    VALUES (@tagId, @lemma, @isPrimary, 'builtin')
+    INSERT INTO tag_aliases (tag_id, lemma, is_primary, source, match_mode)
+    VALUES (@tagId, @lemma, @isPrimary, 'builtin', @matchMode)
     ON CONFLICT(tag_id, lemma) DO NOTHING
   `)
 
@@ -38,13 +44,25 @@ export const seedFromEntries = (db: Database.Database, entries: SeedEntry[]): vo
       const primaryLemma = normalizeSurface(entry.label)
       const seen = new Set<string>()
 
-      insertAlias.run({ tagId: row.id, lemma: primaryLemma, isPrimary: 1 })
+      insertAlias.run({ tagId: row.id, lemma: primaryLemma, isPrimary: 1, matchMode: 'stem' })
       seen.add(primaryLemma)
 
       for (const alias of entry.aliases) {
         const lemma = normalizeSurface(alias)
         if (seen.has(lemma)) continue
-        insertAlias.run({ tagId: row.id, lemma, isPrimary: lemma === primaryLemma ? 1 : 0 })
+        insertAlias.run({
+          tagId: row.id,
+          lemma,
+          isPrimary: lemma === primaryLemma ? 1 : 0,
+          matchMode: 'stem'
+        })
+        seen.add(lemma)
+      }
+
+      for (const alias of entry.exact_aliases ?? []) {
+        const lemma = exactForm(alias)
+        if (seen.has(lemma)) continue
+        insertAlias.run({ tagId: row.id, lemma, isPrimary: 0, matchMode: 'exact' })
         seen.add(lemma)
       }
     }
