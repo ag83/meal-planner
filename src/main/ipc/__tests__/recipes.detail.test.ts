@@ -14,7 +14,7 @@ const SEED: SeedEntry[] = [
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function tagId(slug: string): number {
+const tagId = (slug: string): number => {
   return (
     db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get(slug) as {
       id: number
@@ -22,26 +22,26 @@ function tagId(slug: string): number {
   ).id
 }
 
-function insertRecipe(id: string): void {
+const insertRecipe = (id: string): void => {
   db.prepare(
     'INSERT INTO recipes (id,ext,sha256,width,height,created_at,updated_at) VALUES (?,?,?,?,?,?,?)'
   ).run(id, 'jpg', id, 800, 600, Date.now(), Date.now())
 }
 
-function tagRecipe(recipeId: string, tId: number, source: 'ocr' | 'user' = 'ocr'): void {
+const tagRecipe = (recipeId: string, tId: number, source: 'ocr' | 'user' = 'ocr'): void => {
   db.prepare(
     'INSERT OR IGNORE INTO recipe_tags (recipe_id,tag_id,confidence,source) VALUES (?,?,1.0,?)'
   ).run(recipeId, tId, source)
 }
 
-function suppress(recipeId: string, tId: number): void {
+const suppress = (recipeId: string, tId: number): void => {
   db.prepare(
     'INSERT OR IGNORE INTO recipe_tag_suppressions (recipe_id,tag_id) VALUES (?,?)'
   ).run(recipeId, tId)
 }
 
 // Mirror of the get query in ipc/recipes.ts
-function getRecipe(id: string): { id: string; title: string | null; tags: unknown[] } | null {
+const getRecipe = (id: string): { id: string; title: string | null; tags: unknown[] } | null => {
   const recipe = db
     .prepare('SELECT id, title, notes FROM recipes WHERE id=?')
     .get(id) as { id: string; title: string | null; notes: string | null } | undefined
@@ -57,7 +57,7 @@ function getRecipe(id: string): { id: string; title: string | null; tags: unknow
 }
 
 // Mirror of the setTag logic in ipc/recipes.ts
-function setTag(recipeId: string, tId: number, on: boolean): void {
+const setTag = (recipeId: string, tId: number, on: boolean): void => {
   if (on) {
     db.transaction(() => {
       db.prepare(
@@ -85,11 +85,11 @@ function setTag(recipeId: string, tId: number, on: boolean): void {
 }
 
 // Mirror of the reOcr tag-replacement logic (DB part only — OCR itself is untestable here)
-function applyReOcrTags(
+const applyReOcrTags = (
   recipeId: string,
   ocrText: string,
   matches: { tagId: number; confidence: number }[]
-): void {
+): void => {
   db.transaction(() => {
     db.prepare('UPDATE recipes SET ocr_text=?,updated_at=? WHERE id=?').run(
       ocrText,

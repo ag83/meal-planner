@@ -14,6 +14,8 @@ const router = createHashRouter([
   { path: '/settings', element: <SettingsScreen /> }
 ])
 
-export default function App(): React.JSX.Element {
+const App = (): React.JSX.Element => {
   return <RouterProvider router={router} />
 }
+
+export default App

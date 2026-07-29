@@ -6,13 +6,13 @@ import type { RecipeFull, RecipeTag, TagSuggestion } from '../../../shared/types
 
 // ── Tag chip ─────────────────────────────────────────────────────────────────
 
-function TagChip({
+const TagChip = ({
   tag,
   onRemove
 }: {
   tag: RecipeTag
   onRemove: () => void
-}): React.JSX.Element {
+}): React.JSX.Element => {
   return (
     <span
       title={tag.source === 'ocr' ? 'Auto-extracted' : 'Added by you'}
@@ -36,7 +36,7 @@ function TagChip({
 
 // ── Detail ───────────────────────────────────────────────────────────────────
 
-export default function Detail(): React.JSX.Element {
+const Detail = (): React.JSX.Element => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
@@ -307,3 +307,5 @@ export default function Detail(): React.JSX.Element {
     </div>
   )
 }
+
+export default Detail

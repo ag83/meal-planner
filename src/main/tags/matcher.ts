@@ -6,7 +6,7 @@ export interface TagMatch {
   confidence: number
 }
 
-export function extractTags(db: Database.Database, ocrText: string): TagMatch[] {
+export const extractTags = (db: Database.Database, ocrText: string): TagMatch[] => {
   if (!ocrText.trim()) return []
 
   const stems = normalizeTokens(ocrText)

@@ -24,13 +24,13 @@ const KIND_BADGE: Record<TagKind, string> = {
 
 // ── Alias row ─────────────────────────────────────────────────────────────────
 
-function AliasItem({
+const AliasItem = ({
   alias,
   onRemove
 }: {
   alias: TagAlias
   onRemove: (id: number) => void
-}): React.JSX.Element {
+}): React.JSX.Element => {
   return (
     <li className="flex items-center justify-between py-0.5">
       <span className={`font-mono text-xs ${alias.disabled ? 'text-stone-300 line-through' : 'text-stone-600'}`}>
@@ -57,7 +57,7 @@ function AliasItem({
 
 // ── Tag row ───────────────────────────────────────────────────────────────────
 
-function TagRow({
+const TagRow = ({
   tag,
   onUpdated,
   onDeleted
@@ -65,7 +65,7 @@ function TagRow({
   tag: TagWithAliases
   onUpdated: (updated: TagWithAliases) => void
   onDeleted: (id: number) => void
-}): React.JSX.Element {
+}): React.JSX.Element => {
   const [expanded, setExpanded] = useState(false)
   const [addingAlias, setAddingAlias] = useState(false)
   const [aliasInput, setAliasInput] = useState('')
@@ -237,7 +237,7 @@ function TagRow({
 
 // ── Add tag form ──────────────────────────────────────────────────────────────
 
-function AddTagForm({ onCreated }: { onCreated: (tag: TagWithAliases) => void }): React.JSX.Element {
+const AddTagForm = ({ onCreated }: { onCreated: (tag: TagWithAliases) => void }): React.JSX.Element => {
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
   const [kind, setKind] = useState<TagKind>('ingredient')
@@ -330,7 +330,7 @@ function AddTagForm({ onCreated }: { onCreated: (tag: TagWithAliases) => void })
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
-export default function SettingsScreen(): React.JSX.Element {
+const SettingsScreen = (): React.JSX.Element => {
   const navigate = useNavigate()
   const store = useSettingsStore()
 
@@ -580,3 +580,5 @@ export default function SettingsScreen(): React.JSX.Element {
     </div>
   )
 }
+
+export default SettingsScreen

@@ -4,7 +4,7 @@ import type Database from 'better-sqlite3'
 
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp'])
 
-export async function reconcile(db: Database.Database, vaultPath: string): Promise<void> {
+export const reconcile = async (db: Database.Database, vaultPath: string): Promise<void> => {
   const picturesDir = path.join(vaultPath, 'pictures')
 
   let entries: string[]

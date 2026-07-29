@@ -6,7 +6,7 @@ import { getDb } from '../db/connection'
 
 // recipe-thumb://thumb/<id>  →  <vault>/thumbs/<id>.webp
 // recipe-thumb://full/<id>   →  <vault>/pictures/<id>.<ext>
-export function registerThumbProtocol(): void {
+export const registerThumbProtocol = (): void => {
   protocol.handle('recipe-thumb', async (request) => {
     const url = new URL(request.url)
     const type = url.hostname  // 'thumb' | 'full'

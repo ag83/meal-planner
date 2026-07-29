@@ -2,12 +2,12 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { vault } from '../lib/ipc'
 
-export default function FirstRun(): React.JSX.Element {
+const FirstRun = (): React.JSX.Element => {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function handleChoose(): Promise<void> {
+  const handleChoose = async (): Promise<void> => {
     setError(null)
     setLoading(true)
     try {
@@ -48,3 +48,5 @@ export default function FirstRun(): React.JSX.Element {
     </div>
   )
 }
+
+export default FirstRun

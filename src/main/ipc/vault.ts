@@ -1,7 +1,7 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { vaultManager } from '../vault/manager'
 
-export function registerVaultHandlers(): void {
+export const registerVaultHandlers = (): void => {
   ipcMain.handle('vault:getCurrent', () => vaultManager.getCurrent())
 
   ipcMain.handle('vault:pick', async (event) => {

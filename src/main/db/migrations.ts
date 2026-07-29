@@ -65,7 +65,7 @@ const MIGRATIONS: Migration[] = [
   }
 ]
 
-export function runMigrations(db: Database.Database): void {
+export const runMigrations = (db: Database.Database): void => {
   const version = db.pragma('user_version', { simple: true }) as number
   for (let i = version; i < MIGRATIONS.length; i++) {
     db.transaction(() => {

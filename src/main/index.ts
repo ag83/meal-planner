@@ -14,7 +14,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'recipe-thumb', privileges: { secure: true, standard: true, supportFetchAPI: true } }
 ])
 
-function createWindow(): BrowserWindow {
+const createWindow = (): BrowserWindow => {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,

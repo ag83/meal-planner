@@ -5,10 +5,10 @@ import { runMigrations } from '../../db/migrations'
 let db: Database.Database
 
 // Mirrors the AND/OR queries in src/main/ipc/recipes.ts
-function filterByTags(
+const filterByTags = (
   ids: number[],
   mode: 'and' | 'or'
-): { id: string; tagCount: number }[] {
+): { id: string; tagCount: number }[] => {
   if (ids.length === 0) return []
   const ph = ids.map(() => '?').join(',')
   if (mode === 'and') {
@@ -40,20 +40,20 @@ function filterByTags(
 }
 
 // Helpers
-function insertTag(slug: string): number {
+const insertTag = (slug: string): number => {
   db.prepare(
     "INSERT INTO tags (slug,label,kind,source,created_at) VALUES (?,?,'ingredient','builtin',?)"
   ).run(slug, slug, Date.now())
   return (db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get(slug) as { id: number }).id
 }
 
-function insertRecipe(id: string, missing = 0): void {
+const insertRecipe = (id: string, missing = 0): void => {
   db.prepare(
     'INSERT INTO recipes (id,ext,sha256,created_at,updated_at,missing) VALUES (?,?,?,?,?,?)'
   ).run(id, 'jpg', id, Date.now(), Date.now(), missing)
 }
 
-function tagRecipe(recipeId: string, tagId: number): void {
+const tagRecipe = (recipeId: string, tagId: number): void => {
   db.prepare(
     "INSERT INTO recipe_tags (recipe_id,tag_id,confidence,source) VALUES (?,?,1.0,'ocr')"
   ).run(recipeId, tagId)

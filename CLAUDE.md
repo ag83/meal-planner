@@ -49,6 +49,7 @@ Until Phase 1 lands, `package.json` is a stub — don't run scripts expecting th
 ## Conventions
 
 - **TypeScript everywhere**; no `.js` in `src/`.
+- **Named arrow functions, not `function` declarations**: `const foo = (x: T): R => { ... }`, including default-exported components (`const Foo = (): React.JSX.Element => {...}; export default Foo`). No `function`/`async function` declarations or anonymous `function` expressions anywhere in `src/`.
 - **IPC is the only main↔renderer channel**. Add new handlers in `src/main/ipc/<domain>.ts` and mirror the type in `src/preload/api.d.ts`. Renderer imports the typed `window.api` only.
 - **Electron security non-negotiables**: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true` for the renderer, CSP header set in the main window. Never relax these without a written justification.
 - **DB writes go through prepared statements**, wrapped in a transaction when touching > 1 row.

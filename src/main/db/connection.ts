@@ -5,12 +5,12 @@ import { runMigrations } from './migrations'
 let db: Database.Database | null = null
 let currentVaultPath: string | null = null
 
-export function getDb(): Database.Database {
+export const getDb = (): Database.Database => {
   if (!db) throw new Error('Database not initialized. Call initDb first.')
   return db
 }
 
-export function initDb(vaultPath: string): Database.Database {
+export const initDb = (vaultPath: string): Database.Database => {
   if (db && currentVaultPath === vaultPath) return db
   db?.close()
   db = new Database(path.join(vaultPath, 'meal-planner.db'))
@@ -21,7 +21,7 @@ export function initDb(vaultPath: string): Database.Database {
   return db
 }
 
-export function closeDb(): void {
+export const closeDb = (): void => {
   db?.close()
   db = null
   currentVaultPath = null
