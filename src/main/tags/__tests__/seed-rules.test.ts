@@ -44,9 +44,17 @@ describe('shipped tag rules', () => {
     expect(labelsFor('добавьте морскую соль')).toEqual([])
   })
 
-  it('bare перец means Чёрный перец', () => {
-    expect(labelsFor('перец')).toEqual(['Чёрный перец'])
-    expect(labelsFor('поперчите, добавьте перец')).toEqual(['Чёрный перец'])
+  it('has no Чёрный перец tag at all', () => {
+    const row = db
+      .prepare<[], { n: number }>(`SELECT COUNT(*) AS n FROM tags WHERE slug = 'black_pepper'`)
+      .get()
+    expect(row?.n).toBe(0)
+  })
+
+  it('bare перец matches nothing', () => {
+    expect(labelsFor('перец')).toEqual([])
+    expect(labelsFor('поперчите, добавьте перец')).toEqual([])
+    expect(labelsFor('перец черный молотый')).toEqual([])
   })
 
   it('Болгарский перец requires сладкий or болгарский', () => {
@@ -56,9 +64,8 @@ describe('shipped tag rules', () => {
     expect(labelsFor('перец болгарский')).toEqual(['Болгарский перец'])
   })
 
-  it('still recognises explicit black pepper phrasings', () => {
-    expect(labelsFor('перец черный молотый')).toEqual(['Чёрный перец'])
-    expect(labelsFor('чёрный молотый перец')).toEqual(['Чёрный перец'])
+  it('still isolates Болгарский перец from unqualified pepper text', () => {
+    expect(labelsFor('чёрный молотый перец и сладкий перец')).toEqual(['Болгарский перец'])
   })
 
   it('оливковое масло is Растительное масло, not Сливочное', () => {
@@ -149,5 +156,34 @@ describe('кукуруза and гриль', () => {
   it('does not tag sauce from recipe text', () => {
     expect(labelsFor('полейте соусом')).toEqual([])
     expect(labelsFor('медовый соус')).toEqual(['Мёд'])
+  })
+})
+
+describe('фасоль, фарш and бекон', () => {
+  it('matches фасоль across cases', () => {
+    expect(labelsFor('банка фасоли')).toEqual(['Фасоль'])
+    expect(labelsFor('с фасолью')).toEqual(['Фасоль'])
+    expect(labelsFor('красная фасоль')).toEqual(['Фасоль'])
+    expect(labelsFor('стручковая фасоль')).toEqual(['Фасоль'])
+  })
+
+  it('matches the фасолевый adjective, which stems differently', () => {
+    expect(labelsFor('фасолевый суп')).toContain('Фасоль')
+  })
+
+  it('matches фарш, which the seed already carried', () => {
+    expect(labelsFor('500 г фарша')).toEqual(['Фарш'])
+    expect(labelsFor('мясной фарш')).toEqual(['Фарш'])
+    expect(labelsFor('куриный фарш')).toContain('Фарш')
+  })
+
+  it('does not confuse фаршированный with фарш', () => {
+    expect(labelsFor('фаршированные кабачки')).not.toContain('Фарш')
+  })
+
+  it('matches бекон across cases', () => {
+    expect(labelsFor('бекон')).toEqual(['Бекон'])
+    expect(labelsFor('полоски бекона')).toEqual(['Бекон'])
+    expect(labelsFor('обжарить с беконом')).toEqual(['Бекон'])
   })
 })

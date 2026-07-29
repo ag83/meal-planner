@@ -89,15 +89,10 @@
     - паста томатная
     - томат-паста
 
-- slug: black_pepper
-  label: Чёрный перец
-  kind: ingredient
-  aliases:
-    - перец чёрный
-    - перец черный молотый
-    - чёрный молотый перец
-    - молотый перец
-    - перец
+# Чёрный перец deliberately omitted — it appears in nearly every recipe, so it
+# carries no filtering value. Migration v5 disables it in vaults that have it.
+# Consequence: bare "перец" now matches nothing; Болгарский перец still requires
+# сладкий/болгарский.
 
 - slug: eggplant
   label: Баклажан
@@ -413,6 +408,24 @@
     - кукурузные зёрна
     - консервированная кукуруза
     - кукуруза консервированная
+
+- slug: beans
+  label: Фасоль
+  kind: ingredient
+  # "фасолевый" stems to фасолев, not фасол — both forms are needed.
+  aliases:
+    - фасолевый
+    - красная фасоль
+    - белая фасоль
+    - стручковая фасоль
+
+- slug: bacon
+  label: Бекон
+  kind: ingredient
+  aliases:
+    - копчёный бекон
+    - бекон копчёный
+    - полоски бекона
 
 # ── Dish types ───────────────────────────────────────────────────────────────
 

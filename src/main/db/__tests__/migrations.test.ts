@@ -31,9 +31,9 @@ describe('runMigrations', () => {
     expect(tables).toContain('recipe_tag_suppressions')
   })
 
-  it('sets user_version to 4 after migration', () => {
+  it('sets user_version to 5 after migration', () => {
     runMigrations(db)
-    expect(db.pragma('user_version', { simple: true }) as number).toBe(4)
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(5)
   })
 
   it('tag_aliases has match_mode defaulting to stem', () => {
@@ -225,7 +225,36 @@ describe('v2 → v3 tag rule corrections', () => {
 
   it('is a no-op on a fresh vault with none of those rows', () => {
     expect(() => runMigrations(db)).not.toThrow()
-    expect(db.pragma('user_version', { simple: true }) as number).toBe(4)
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(5)
+  })
+})
+
+describe('v4 → v5 disables the Чёрный перец tag', () => {
+  it('disables the black_pepper tag and its builtin aliases', () => {
+    runMigrations(db)
+    db.pragma('user_version = 4')
+    db.prepare(
+      `INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('black_pepper','Чёрный перец','ingredient','builtin',1)`
+    ).run()
+    const id = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('black_pepper')!.id
+    const insertAlias = db.prepare(
+      `INSERT INTO tag_aliases (tag_id,lemma,is_primary,source,match_mode) VALUES (?,?,0,'builtin','stem')`
+    )
+    insertAlias.run(id, 'перец')
+    insertAlias.run(id, 'молот перец')
+
+    runMigrations(db)
+
+    const aliases = db
+      .prepare<[number], { disabled: number }>('SELECT disabled FROM tag_aliases WHERE tag_id=?')
+      .all(id)
+    expect(aliases.every((a) => a.disabled === 1)).toBe(true)
+    const tag = db
+      .prepare<[], { disabled: number }>(`SELECT disabled FROM tags WHERE slug='black_pepper'`)
+      .get()
+    expect(tag?.disabled).toBe(1)
   })
 })
 
