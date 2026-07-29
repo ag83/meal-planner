@@ -62,6 +62,14 @@ const MIGRATIONS: Migration[] = [
         PRIMARY KEY (recipe_id, tag_id)
       );
     `)
+  },
+  // v1 → v2: match_mode on aliases, for forms that stemming cannot disambiguate
+  // (печень/печенье both stem to печен).
+  (db) => {
+    db.exec(`
+      ALTER TABLE tag_aliases ADD COLUMN match_mode TEXT NOT NULL DEFAULT 'stem'
+        CHECK(match_mode IN ('stem','exact'));
+    `)
   }
 ]
 
