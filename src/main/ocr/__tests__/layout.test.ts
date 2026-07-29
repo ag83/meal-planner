@@ -93,6 +93,19 @@ describe('detectColumnCuts', () => {
     expect(detectColumnCuts(twoColumnPage().slice(0, 3))).toEqual([])
   })
 
+  it('still finds the gutter when one stray word bridges it', () => {
+    const words = twoColumnPage()
+    words.push({
+      text: 'заголовок',
+      confidence: 90,
+      bbox: { x0: 120, y0: 520, x1: 300, y1: 538 }
+    })
+    const cuts = detectColumnCuts(words)
+    expect(cuts).toHaveLength(1)
+    expect(cuts[0]).toBeGreaterThan(180)
+    expect(cuts[0]).toBeLessThan(220)
+  })
+
   it('finds the real gutter in the spaghetti fixture', () => {
     const cuts = detectColumnCuts(spaghettiWords as OcrWord[])
     expect(cuts).toHaveLength(1)
@@ -173,5 +186,96 @@ describe('reconstructLines', () => {
     const lines = reconstructLines(liverWords as OcrWord[])
     const merged = lines.find((l) => l.includes('печень куриная') && l.includes('Тульской'))
     expect(merged).toBeUndefined()
+  })
+})
+
+// A line of evenly spaced words at a given y.
+const rowAt = (label: string, y: number, x0 = 0, x1 = 150): OcrWord => ({
+  text: label,
+  confidence: 90,
+  bbox: { x0, y0: y, x1, y1: y + 18 }
+})
+
+describe('reconstructLines paragraph breaks', () => {
+  it('inserts no blank line between evenly spaced lines', () => {
+    const words = [0, 30, 60, 90, 120].map((y, i) => rowAt(`строка${i}`, y))
+    expect(reconstructLines(words)).toEqual([
+      'строка0',
+      'строка1',
+      'строка2',
+      'строка3',
+      'строка4'
+    ])
+  })
+
+  it('inserts a blank line where the vertical gap jumps', () => {
+    const words = [0, 30, 60, 200, 230, 260].map((y, i) => rowAt(`строка${i}`, y))
+    const lines = reconstructLines(words)
+    expect(lines).toEqual([
+      'строка0',
+      'строка1',
+      'строка2',
+      '',
+      'строка3',
+      'строка4',
+      'строка5'
+    ])
+  })
+
+  it('inserts a blank line between columns', () => {
+    const words: OcrWord[] = []
+    for (let i = 0; i < 10; i++) {
+      const y = i * 30
+      words.push(rowAt(`лево${i}`, y, 0, 150))
+      words.push(rowAt(`право${i}`, y, 300, 450))
+    }
+    const lines = reconstructLines(words)
+    const blankIdx = lines.indexOf('')
+    expect(blankIdx).toBeGreaterThan(0)
+    expect(lines[blankIdx - 1]).toContain('лево')
+    expect(lines[blankIdx + 1]).toContain('право')
+  })
+
+  it('keeps a headline that spans both columns intact and emits it first', () => {
+    const words: OcrWord[] = []
+    // Headline across the top: evenly spaced words spanning the gutter.
+    'Спагетти с индейкой и грибами'.split(' ').forEach((t, i) => {
+      words.push({
+        text: t,
+        confidence: 90,
+        bbox: { x0: 20 + i * 90, y0: 0, x1: 20 + i * 90 + 80, y1: 22 }
+      })
+    })
+    for (let i = 0; i < 10; i++) {
+      const y = 60 + i * 30
+      words.push(rowAt(`лево${i}`, y, 0, 150))
+      words.push(rowAt(`право${i}`, y, 300, 450))
+    }
+    const lines = reconstructLines(words)
+    expect(lines[0]).toBe('Спагетти с индейкой и грибами')
+    const leftIdx = lines.findIndex((l) => l.includes('лево0'))
+    const rightIdx = lines.findIndex((l) => l.includes('право0'))
+    expect(leftIdx).toBeGreaterThan(0)
+    expect(rightIdx).toBeGreaterThan(leftIdx)
+  })
+
+  it('still splits a line whose halves are separated by a wide gap at the cut', () => {
+    const words: OcrWord[] = []
+    for (let i = 0; i < 10; i++) {
+      const y = i * 30
+      words.push(rowAt(`лево${i}`, y, 0, 150))
+      words.push(rowAt(`право${i}`, y, 300, 450))
+    }
+    const lines = reconstructLines(words)
+    for (const line of lines) {
+      expect(line.includes('лево') && line.includes('право')).toBe(false)
+    }
+  })
+
+  it('does not emit a leading or trailing blank line', () => {
+    const words = [0, 30, 60, 200].map((y, i) => rowAt(`строка${i}`, y))
+    const lines = reconstructLines(words)
+    expect(lines[0]).not.toBe('')
+    expect(lines[lines.length - 1]).not.toBe('')
   })
 })

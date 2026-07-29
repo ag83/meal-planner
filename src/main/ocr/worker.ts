@@ -2,11 +2,29 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { app } from 'electron'
-import { createWorker } from 'tesseract.js'
+import sharp from 'sharp'
+import { createWorker, PSM } from 'tesseract.js'
 import type { Worker } from 'tesseract.js'
+import { flattenWords, reconstructLines } from './layout'
+import { joinLines } from './postprocess'
+import type { TessBlock } from './layout'
 
 const POOL_SIZE = Math.max(1, Math.min(os.cpus().length - 1, 4))
 const LANG = 'rus+eng'
+const UPSCALE = 2
+
+// Screenshots run 8-12px x-height; Tesseract wants >=20px. Upscaling also recovers
+// stylised headings that are otherwise dropped entirely.
+const preprocess = async (imagePath: string): Promise<Buffer> => {
+  const image = sharp(imagePath)
+  const { width } = await image.metadata()
+  if (!width) return image.greyscale().normalise().toBuffer()
+  return image
+    .resize({ width: width * UPSCALE, kernel: 'lanczos3' })
+    .greyscale()
+    .normalise()
+    .toBuffer()
+}
 
 interface PoolEntry {
   worker: Worker
@@ -25,6 +43,7 @@ const buildPool = async (): Promise<void> => {
       const worker = await createWorker({ cachePath, cacheMethod: 'readWrite' })
       await worker.loadLanguage(LANG)
       await worker.initialize(LANG)
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO })
       return { worker, busy: false }
     })
   )
@@ -67,10 +86,13 @@ export const runOcr = async (imagePath: string): Promise<OcrResult> => {
   await ensurePool()
   const entry = await acquireWorker()
   try {
+    const buffer = await preprocess(imagePath)
     const {
-      data: { text, confidence }
-    } = await entry.worker.recognize(imagePath)
-    return { text: text.trim(), confidence, lang: LANG }
+      data: { blocks, confidence }
+    } = await entry.worker.recognize(buffer)
+    const words = flattenWords((blocks ?? []) as TessBlock[])
+    const text = joinLines(reconstructLines(words))
+    return { text, confidence, lang: LANG }
   } finally {
     entry.busy = false
   }
