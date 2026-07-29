@@ -404,6 +404,16 @@
     - свежие дрожжи
     - прессованные дрожжи
 
+- slug: corn
+  label: Кукуруза
+  kind: ingredient
+  # "кукурузный" stems to кукурузн, not кукуруз — both forms are needed.
+  aliases:
+    - кукурузный
+    - кукурузные зёрна
+    - консервированная кукуруза
+    - кукуруза консервированная
+
 # ── Dish types ───────────────────────────────────────────────────────────────
 
 - slug: soup
@@ -479,6 +489,17 @@
     - булочки
     - хлеб домашний
     - хлебопечка
+
+- slug: grill
+  label: Гриль
+  kind: dish_type
+  # "мангал" stems to манга but "мангале"/"мангалом" stem to мангал, so both
+  # surface forms must be seeded or half the inflections never match.
+  aliases:
+    - шашлык
+    - шашлычок
+    - мангал
+    - мангале
 
 - slug: sauce
   label: Соус
