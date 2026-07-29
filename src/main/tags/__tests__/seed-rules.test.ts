@@ -138,4 +138,16 @@ describe('кукуруза and гриль', () => {
   it('reports Гриль once for a text using all three words', () => {
     expect(labelsFor('шашлык на мангале или на гриле')).toEqual(['Гриль'])
   })
+
+  it('has no Соус tag at all', () => {
+    const row = db
+      .prepare<[], { n: number }>(`SELECT COUNT(*) AS n FROM tags WHERE slug = 'sauce'`)
+      .get()
+    expect(row?.n).toBe(0)
+  })
+
+  it('does not tag sauce from recipe text', () => {
+    expect(labelsFor('полейте соусом')).toEqual([])
+    expect(labelsFor('медовый соус')).toEqual(['Мёд'])
+  })
 })

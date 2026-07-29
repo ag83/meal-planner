@@ -501,14 +501,8 @@
     - мангал
     - мангале
 
-- slug: sauce
-  label: Соус
-  kind: dish_type
-  aliases:
-    - подлива
-    - заправка
-    - маринад
-    - соусик
+# Соус deliberately omitted — superseded by Гриль above. Migration v4 disables it
+# in vaults that already have it.
 
 - slug: drink
   label: Напиток

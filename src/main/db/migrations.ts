@@ -92,6 +92,16 @@ const MIGRATIONS: Migration[] = [
 
       UPDATE tags SET disabled = 1 WHERE slug = 'salt' AND source = 'builtin';
     `)
+  },
+  // v3 → v4: Соус retired in favour of Гриль. Same additive-seed reasoning as v3.
+  (db) => {
+    db.exec(`
+      UPDATE tag_aliases SET disabled = 1
+        WHERE source = 'builtin'
+          AND tag_id = (SELECT id FROM tags WHERE slug = 'sauce');
+
+      UPDATE tags SET disabled = 1 WHERE slug = 'sauce' AND source = 'builtin';
+    `)
   }
 ]
 
