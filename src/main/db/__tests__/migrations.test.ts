@@ -31,9 +31,9 @@ describe('runMigrations', () => {
     expect(tables).toContain('recipe_tag_suppressions')
   })
 
-  it('sets user_version to 3 after migration', () => {
+  it('sets user_version to 4 after migration', () => {
     runMigrations(db)
-    expect(db.pragma('user_version', { simple: true }) as number).toBe(3)
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(4)
   })
 
   it('tag_aliases has match_mode defaulting to stem', () => {
@@ -225,6 +225,58 @@ describe('v2 → v3 tag rule corrections', () => {
 
   it('is a no-op on a fresh vault with none of those rows', () => {
     expect(() => runMigrations(db)).not.toThrow()
-    expect(db.pragma('user_version', { simple: true }) as number).toBe(3)
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(4)
+  })
+})
+
+describe('v3 → v4 disables the Соус tag', () => {
+  it('disables the sauce tag and its builtin aliases', () => {
+    runMigrations(db)
+    db.pragma('user_version = 3')
+    db.prepare(
+      `INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('sauce','Соус','dish_type','builtin',1)`
+    ).run()
+    const id = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('sauce')!
+      .id
+    const insertAlias = db.prepare(
+      `INSERT INTO tag_aliases (tag_id,lemma,is_primary,source,match_mode) VALUES (?,?,0,?, 'stem')`
+    )
+    insertAlias.run(id, 'соус', 'builtin')
+    insertAlias.run(id, 'маринад', 'builtin')
+
+    runMigrations(db)
+
+    const aliases = db
+      .prepare<[number], { lemma: string; disabled: number }>(
+        'SELECT lemma, disabled FROM tag_aliases WHERE tag_id=?'
+      )
+      .all(id)
+    expect(aliases.every((a) => a.disabled === 1)).toBe(true)
+    const tag = db
+      .prepare<[], { disabled: number }>(`SELECT disabled FROM tags WHERE slug='sauce'`)
+      .get()
+    expect(tag?.disabled).toBe(1)
+  })
+
+  it('leaves a user-created sauce alias alone', () => {
+    runMigrations(db)
+    db.pragma('user_version = 3')
+    db.prepare(
+      `INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('sauce','Соус','dish_type','builtin',1)`
+    ).run()
+    const id = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('sauce')!
+      .id
+    db.prepare(
+      `INSERT INTO tag_aliases (tag_id,lemma,is_primary,source,match_mode) VALUES (?,'мойсоус',0,'user','stem')`
+    ).run(id)
+
+    runMigrations(db)
+
+    const mine = db
+      .prepare<[number], { disabled: number }>(
+        `SELECT disabled FROM tag_aliases WHERE tag_id=? AND lemma='мойсоус'`
+      )
+      .get(id)
+    expect(mine?.disabled).toBe(0)
   })
 })
