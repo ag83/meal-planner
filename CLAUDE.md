@@ -56,6 +56,55 @@ Until Phase 1 lands, `package.json` is a stub — don't run scripts expecting th
 - **Vault paths**: never persist absolute paths inside `recipes` rows — store the id/ext and reconstruct paths from the current vault root. (Survives folder-rename and OS-reinstall.)
 - **No comments narrating WHAT** — code names should carry that. Comment WHY only when it's non-obvious.
 
+## Git workflow
+
+### Branching — Gitflow
+
+| Branch | Purpose | Branches from | Merges into |
+|---|---|---|---|
+| `master` | Released, tagged state. Never commit directly. | — | — |
+| `develop` | Integration branch; the default target for everyday work. | `master` | `master` (via release) |
+| `feature/<slug>` | One feature or fix. | `develop` | `develop` |
+| `release/<version>` | Version stabilisation, bumps, changelog. | `develop` | `master` **and** `develop` |
+| `hotfix/<slug>` | Urgent production fix. | `master` | `master` **and** `develop` |
+
+- Never commit straight to `master` or `develop` — always branch first.
+- Slugs are kebab-case and describe the outcome: `feature/ocr-reading-order`, `hotfix/thumbnail-crash`.
+- Merge feature branches with `--no-ff` so the branch boundary stays visible in history.
+- Tag releases on `master` as `v<major>.<minor>.<patch>`, matching `package.json`.
+
+### Commit messages — Conventional Commits
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+- **Type** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+- **Scope** — optional, the area touched. This repo's usual scopes: `ocr`, `tags`, `db`, `ipc`, `vault`, `ui`, `seed`.
+- **Subject** — imperative mood, lower case, no trailing period, ≤ 72 chars.
+- **Body** — the *why*, not the what. Wrap at 72 columns.
+- **Breaking changes** — append `!` after the type/scope and add a `BREAKING CHANGE:` footer. A `schemaVersion` bump is always breaking.
+
+```
+feat(ocr): reconstruct column order from word geometry
+
+tesseract.js defaults to PSM 6, which does no layout analysis and reads
+multi-column pages straight across the columns.
+
+fix(tags): stop печень matching Десерт via the печенье stem
+docs(claude): record the OCR page-segmentation invariant
+feat(db)!: add tag_aliases.match_mode
+
+BREAKING CHANGE: schemaVersion 1 → 2; older builds refuse the vault.
+```
+
+- Keep the `Co-Authored-By:` trailer on assistant-authored commits.
+- One logical change per commit; do not mix a refactor with a behaviour change.
+
 ## Data flow cheatsheet
 
 1. User drops images on the gallery → renderer collects paths → `window.api.recipes.ingest(paths)`.
