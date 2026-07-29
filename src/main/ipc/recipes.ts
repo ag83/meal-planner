@@ -8,7 +8,7 @@ import { runOcr } from '../ocr/worker'
 import { extractTags } from '../tags/matcher'
 import type { IngestProgress } from '../../shared/types'
 
-export function registerRecipeHandlers(): void {
+export const registerRecipeHandlers = (): void => {
   ipcMain.handle('recipes:list', () => {
     if (!vaultManager.getCurrent()) return []
     const db = getDb()

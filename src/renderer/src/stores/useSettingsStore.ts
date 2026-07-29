@@ -25,7 +25,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   }
 }))
 
-function applyTheme(theme: Settings['theme']): void {
+const applyTheme = (theme: Settings['theme']): void => {
   const root = document.documentElement
   if (theme === 'dark') {
     root.classList.add('dark')

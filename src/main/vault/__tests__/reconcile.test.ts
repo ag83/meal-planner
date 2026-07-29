@@ -21,17 +21,17 @@ afterEach(async () => {
   await fs.rm(tmpDir, { recursive: true, force: true })
 })
 
-function insertRecipe(id: string, ext: string) {
+const insertRecipe = (id: string, ext: string): void => {
   db.prepare(
     `INSERT INTO recipes (id, ext, sha256, created_at, updated_at) VALUES (?,?,?,1,1)`
   ).run(id, ext, `sha-${id}`)
 }
 
-function getMissing(id: string): number {
+const getMissing = (id: string): number => {
   return (db.prepare<[string], { missing: number }>('SELECT missing FROM recipes WHERE id=?').get(id) as { missing: number }).missing
 }
 
-async function writePicture(filename: string) {
+const writePicture = async (filename: string): Promise<void> => {
   const dir = path.join(tmpDir, 'pictures')
   await fs.mkdir(dir, { recursive: true })
   await fs.writeFile(path.join(dir, filename), 'fake')

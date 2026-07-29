@@ -13,7 +13,7 @@ export interface SeedEntry {
 }
 
 // Additive upsert: inserts missing slugs/aliases; never overwrites or deletes user data.
-export function seedFromEntries(db: Database.Database, entries: SeedEntry[]): void {
+export const seedFromEntries = (db: Database.Database, entries: SeedEntry[]): void => {
   const insertTag = db.prepare(`
     INSERT INTO tags (slug, label, kind, source, created_at)
     VALUES (@slug, @label, @kind, 'builtin', @createdAt)
@@ -51,7 +51,7 @@ export function seedFromEntries(db: Database.Database, entries: SeedEntry[]): vo
   })()
 }
 
-export async function seedFromFile(db: Database.Database): Promise<void> {
+export const seedFromFile = async (db: Database.Database): Promise<void> => {
   const seedPath = app.isPackaged
     ? path.join(process.resourcesPath, 'seed-tags.yaml')
     : path.join(app.getAppPath(), 'resources', 'seed-tags.yaml')

@@ -48,7 +48,7 @@ const STATUS_COLOR: Record<IngestStatus, string> = {
 
 // ── Recipe card ─────────────────────────────────────────────────────────────
 
-function RecipeCard({ item }: { item: RecipeSummary }): React.JSX.Element {
+const RecipeCard = ({ item }: { item: RecipeSummary }): React.JSX.Element => {
   return (
     <Link
       to={`/recipe/${item.id}`}
@@ -75,7 +75,7 @@ function RecipeCard({ item }: { item: RecipeSummary }): React.JSX.Element {
 
 type SortKey = 'newest' | 'oldest' | 'title'
 
-function sortItems(items: RecipeSummary[], key: SortKey): RecipeSummary[] {
+const sortItems = (items: RecipeSummary[], key: SortKey): RecipeSummary[] => {
   return [...items].sort((a, b) => {
     if (key === 'newest') return b.createdAt - a.createdAt
     if (key === 'oldest') return a.createdAt - b.createdAt
@@ -88,7 +88,7 @@ function sortItems(items: RecipeSummary[], key: SortKey): RecipeSummary[] {
 const ITEM_H = 200
 const GAP = 8
 
-export default function Gallery(): React.JSX.Element {
+const Gallery = (): React.JSX.Element => {
   const navigate = useNavigate()
   const store = useRecipesStore()
   const tagFilter = useTagFilterStore()
@@ -490,3 +490,5 @@ export default function Gallery(): React.JSX.Element {
     </div>
   )
 }
+
+export default Gallery

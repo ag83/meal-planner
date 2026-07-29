@@ -10,11 +10,11 @@ const DEFAULTS: Settings = {
   ocrLang: 'rus+eng'
 }
 
-function configPath(): string {
+const configPath = (): string => {
   return path.join(app.getPath('userData'), 'config.json')
 }
 
-async function readRawConfig(): Promise<Record<string, unknown>> {
+const readRawConfig = async (): Promise<Record<string, unknown>> => {
   try {
     const raw = await fs.readFile(configPath(), 'utf-8')
     return JSON.parse(raw) as Record<string, unknown>
@@ -23,7 +23,7 @@ async function readRawConfig(): Promise<Record<string, unknown>> {
   }
 }
 
-export function registerSettingsHandlers(): void {
+export const registerSettingsHandlers = (): void => {
   ipcMain.handle('settings:get', async (): Promise<Settings> => {
     const config = await readRawConfig()
     return {

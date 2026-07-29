@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { vault } from '../lib/ipc'
 
-export default function Root(): React.JSX.Element {
+const Root = (): React.JSX.Element => {
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -17,3 +17,5 @@ export default function Root(): React.JSX.Element {
     </div>
   )
 }
+
+export default Root

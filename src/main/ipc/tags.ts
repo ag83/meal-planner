@@ -4,7 +4,7 @@ import { vaultManager } from '../vault/manager'
 import { normalizeTokens } from '../tags/normalize'
 import { extractTags } from '../tags/matcher'
 
-function toSlug(label: string): string {
+const toSlug = (label: string): string => {
   const base = label
     .trim()
     .toLowerCase()
@@ -32,7 +32,7 @@ type AliasRow = {
   disabled: number
 }
 
-export function registerTagHandlers(): void {
+export const registerTagHandlers = (): void => {
   // ── suggest ───────────────────────────────────────────────────────────────
 
   ipcMain.handle('tags:suggest', (_event, prefix: unknown, limit: unknown) => {

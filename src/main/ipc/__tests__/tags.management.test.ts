@@ -16,7 +16,7 @@ const SEED: SeedEntry[] = [
 
 // ── Helpers (mirror the IPC handler SQL) ──────────────────────────────────────
 
-function tagId(slug: string): number {
+const tagId = (slug: string): number => {
   return (
     db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get(slug) as {
       id: number
@@ -24,19 +24,19 @@ function tagId(slug: string): number {
   ).id
 }
 
-function insertRecipe(id: string, ocrText: string | null = null): void {
+const insertRecipe = (id: string, ocrText: string | null = null): void => {
   db.prepare(
     'INSERT INTO recipes (id,ext,sha256,width,height,created_at,updated_at,ocr_text) VALUES (?,?,?,?,?,?,?,?)'
   ).run(id, 'jpg', id, 800, 600, Date.now(), Date.now(), ocrText)
 }
 
-function tagRecipe(recipeId: string, tId: number): void {
+const tagRecipe = (recipeId: string, tId: number): void => {
   db.prepare(
     "INSERT OR IGNORE INTO recipe_tags (recipe_id,tag_id,confidence,source) VALUES (?,?,1.0,'ocr')"
   ).run(recipeId, tId)
 }
 
-function toSlug(label: string): string {
+const toSlug = (label: string): string => {
   const base = label
     .trim()
     .toLowerCase()
@@ -47,11 +47,11 @@ function toSlug(label: string): string {
   return `${base || 'tag'}_${Date.now().toString(36)}`
 }
 
-function listTags(kind?: string): Array<{
+const listTags = (kind?: string): Array<{
   id: number; slug: string; label: string; kind: string; source: string; disabled: boolean
   recipeCount: number
   aliases: Array<{ id: number; lemma: string; isPrimary: boolean; source: string; disabled: boolean }>
-}> {
+}> => {
   const rows = (
     kind
       ? db.prepare('SELECT * FROM tags WHERE kind=? ORDER BY label ASC').all(kind)
@@ -83,7 +83,7 @@ function listTags(kind?: string): Array<{
   }))
 }
 
-function createTag(label: string, kind: string, aliases: string[] = []): number {
+const createTag = (label: string, kind: string, aliases: string[] = []): number => {
   const slug = toSlug(label)
   const result = db
     .prepare(
@@ -109,7 +109,7 @@ function createTag(label: string, kind: string, aliases: string[] = []): number 
   return newId
 }
 
-function updateTag(id: number, patch: { label?: string; kind?: string; disabled?: boolean }): void {
+const updateTag = (id: number, patch: { label?: string; kind?: string; disabled?: boolean }): void => {
   if (patch.label !== undefined) {
     db.prepare('UPDATE tags SET label=? WHERE id=?').run(patch.label.trim(), id)
   }
@@ -121,7 +121,7 @@ function updateTag(id: number, patch: { label?: string; kind?: string; disabled?
   }
 }
 
-function addAlias(tId: number, surface: string): void {
+const addAlias = (tId: number, surface: string): void => {
   const lemma = normalizeTokens(surface.trim()).join(' ')
   if (!lemma) throw new Error('Alias normalizes to empty string')
   const existing = db
@@ -137,7 +137,7 @@ function addAlias(tId: number, surface: string): void {
   ).run(tId, lemma)
 }
 
-function removeAlias(aliasId: number): void {
+const removeAlias = (aliasId: number): void => {
   const row = db
     .prepare<[number], { source: string; is_primary: number }>(
       'SELECT source, is_primary FROM tag_aliases WHERE id=?'
@@ -152,7 +152,7 @@ function removeAlias(aliasId: number): void {
   }
 }
 
-function deleteTag(id: number): void {
+const deleteTag = (id: number): void => {
   const row = db.prepare<[number], { source: string }>('SELECT source FROM tags WHERE id=?').get(id)
   if (!row) return
   if (row.source === 'builtin') {
@@ -162,7 +162,7 @@ function deleteTag(id: number): void {
   }
 }
 
-function retagAll(): { updated: number } {
+const retagAll = (): { updated: number } => {
   const allRecipes = db
     .prepare<[], { id: string; ocr_text: string | null }>(
       'SELECT id, ocr_text FROM recipes WHERE ocr_text IS NOT NULL'

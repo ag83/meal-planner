@@ -13,16 +13,16 @@ export type ProgressCallback = (p: IngestProgress) => void
 
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp'])
 
-function generateId(): string {
+const generateId = (): string => {
   return crypto.randomBytes(9).toString('base64url')
 }
 
-export async function ingestFile(
+export const ingestFile = async (
   db: Database.Database,
   vaultPath: string,
   srcPath: string,
   onProgress: ProgressCallback
-): Promise<void> {
+): Promise<void> => {
   const ext = path.extname(srcPath).slice(1).toLowerCase()
   if (!IMAGE_EXTS.has(ext)) {
     onProgress({ filePath: srcPath, status: 'error', error: `Unsupported type: .${ext}` })

@@ -10,11 +10,11 @@ export interface ImageMeta {
   bytes: number
 }
 
-export async function makeThumbnail(
+export const makeThumbnail = async (
   srcPath: string,
   thumbsDir: string,
   id: string
-): Promise<ImageMeta> {
+): Promise<ImageMeta> => {
   const { size: bytes } = await fs.stat(srcPath)
 
   const image = sharp(srcPath)

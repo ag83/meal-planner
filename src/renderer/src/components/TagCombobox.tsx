@@ -4,7 +4,7 @@ import type { TagSuggestion, TagKind } from '../../../shared/types'
 
 // ── Debounce ────────────────────────────────────────────────────────────────
 
-function useDebounce<T>(value: T, ms: number): T {
+const useDebounce = <T,>(value: T, ms: number): T => {
   const [debounced, setDebounced] = useState(value)
   useEffect(() => {
     const t = setTimeout(() => setDebounced(value), ms)
@@ -37,11 +37,11 @@ interface Props {
   placeholder?: string
 }
 
-export function TagCombobox({
+export const TagCombobox = ({
   selectedIds,
   onSelect,
   placeholder = 'Поиск тегов…'
-}: Props): React.JSX.Element {
+}: Props): React.JSX.Element => {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<TagSuggestion[]>([])
   const [open, setOpen] = useState(false)

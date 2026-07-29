@@ -29,10 +29,10 @@ beforeEach(() => {
 afterEach(() => db.close())
 
 // Mirrors the query in src/main/ipc/tags.ts
-function suggestTags(
+const suggestTags = (
   prefix: string,
   limit = 20
-): { id: number; label: string; kind: string; recipeCount: number }[] {
+): { id: number; label: string; kind: string; recipeCount: number }[] => {
   const stems = normalizeTokens(prefix)
   const stemmedFull = stems.join(' ')
   if (!stemmedFull) return []

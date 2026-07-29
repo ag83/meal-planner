@@ -16,7 +16,7 @@ interface PoolEntry {
 let pool: PoolEntry[] = []
 let initPromise: Promise<void> | null = null
 
-async function buildPool(): Promise<void> {
+const buildPool = async (): Promise<void> => {
   // cachePath = local storage for .traineddata files; langPath defaults to HTTPS for downloading
   const cachePath = path.join(app.getPath('userData'), 'tessdata')
   fs.mkdirSync(cachePath, { recursive: true })
@@ -30,19 +30,19 @@ async function buildPool(): Promise<void> {
   )
 }
 
-function ensurePool(): Promise<void> {
+const ensurePool = (): Promise<void> => {
   initPromise ??= buildPool()
   return initPromise
 }
 
-export async function terminateOcrPool(): Promise<void> {
+export const terminateOcrPool = async (): Promise<void> => {
   if (pool.length === 0) return
   await Promise.all(pool.map((e) => e.worker.terminate()))
   pool = []
   initPromise = null
 }
 
-function acquireWorker(): Promise<PoolEntry> {
+const acquireWorker = (): Promise<PoolEntry> => {
   return new Promise((resolve) => {
     const tryFind = (): void => {
       const entry = pool.find((e) => !e.busy)
@@ -63,7 +63,7 @@ export interface OcrResult {
   lang: string
 }
 
-export async function runOcr(imagePath: string): Promise<OcrResult> {
+export const runOcr = async (imagePath: string): Promise<OcrResult> => {
   await ensurePool()
   const entry = await acquireWorker()
   try {

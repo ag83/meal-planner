@@ -39,7 +39,7 @@ afterEach(() => {
   db.close()
 })
 
-function tagIdFor(slug: string): number {
+const tagIdFor = (slug: string): number => {
   return (db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug = ?').get(slug) as { id: number }).id
 }
 
