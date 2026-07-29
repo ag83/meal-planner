@@ -59,7 +59,7 @@ Until Phase 1 lands, `package.json` is a stub — don't run scripts expecting th
 ## Data flow cheatsheet
 
 1. User drops images on the gallery → renderer collects paths → `window.api.recipes.ingest(paths)`.
-2. Main ingestion pipeline: hash → dedupe → copy to `pictures/` → thumb to `thumbs/` → OCR → **`tags/matcher.ts` extracts tag IDs** → INSERT `recipes` + `recipe_tags` → emit `ingest:progress`.
+2. Main ingestion pipeline: hash → dedupe → copy to `pictures/` → thumb to `thumbs/` → OCR (2× upscale → PSM 3 → `ocr/layout.ts` reorders columns → `ocr/postprocess.ts` de-hyphenates) → **`tags/matcher.ts` extracts tag IDs** → INSERT `recipes` + `recipe_tags` → emit `ingest:progress`.
 3. Renderer listens for `ingest:progress`, `vault:changed`, `tags:changed` to refresh the relevant stores.
 4. Search: user types in the `TagCombobox` → IPC `tags.suggest(prefix)` returns canonical tags (label only, never aliases) → user picks tags → `useTagFilterStore` holds selected IDs → IPC `recipes.filterByTags(ids, mode)` returns the filtered gallery. **AND is the default** mode; OR is a toggle.
 
@@ -86,7 +86,7 @@ The `vault.json` `schemaVersion` is the source of truth for migrations — bump 
 
 - `recipes` — one row per recipe; holds `ocr_text` (display + v2), `sha256` (dedupe), and metadata.
 - `tags` — canonical concepts. `label` is the UI text. `kind` ∈ `ingredient | dish_type | cuisine | user`. `source` ∈ `builtin | user`. Built-in rows are flagged `disabled`, never deleted.
-- `tag_aliases` — every recognized form (already stemmed) that resolves to a tag. `is_primary=1` for the one that matches the canonical label. Multi-word aliases stored as space-joined stems.
+- `tag_aliases` — every recognized form (already stemmed) that resolves to a tag. `is_primary=1` for the one that matches the canonical label. Multi-word aliases stored as space-joined stems. `match_mode` ∈ `stem | exact`; `exact` rows are matched against the raw normalized surface (no stemming) and exist for words the stemmer collapses onto a homonym.
 - `recipe_tags` — M:N. `source` ∈ `ocr | user`. `confidence` is normalized occurrence weight at ingest (1.0 for user-set).
 - `recipe_tag_suppressions` — per-recipe "don't re-add this OCR tag on re-OCR." Written when a user removes an OCR-extracted chip.
 
@@ -101,6 +101,10 @@ Seed re-application on upgrade is **strictly additive**: insert missing built-in
 - **Don't store user OCR-text edits as part of `ocr_text`** if you want "Re-run OCR" to be non-destructive — keep `ocr_text` (machine) separate from `notes` (human). Current schema follows this.
 - **Don't show alias surface forms in the UI.** The dropdown, the chips, the tag library — all display `tags.label`. Aliases are an implementation detail of matching. (See SPECS §3.4 FR-S2.)
 - **Don't write a second Russian normalizer.** Every code path that compares Russian text against the tag library must go through `src/main/tags/normalize.ts`. Duplicating the rules (a stemmer call here, a `ё→е` there) silently breaks recall.
+- **Don't rely on tesseract.js's default page segmentation.** It ships `PSM.SINGLE_BLOCK` (6), which performs no page layout analysis and reads multi-column pages straight across the columns. `src/main/ocr/worker.ts` sets `PSM.AUTO` (3) explicitly. Never remove that call.
+- **Don't put OCR text repair in `tags/normalize.ts`.** De-hyphenation and line joining live in `src/main/ocr/postprocess.ts`, upstream of both display and matching, so the single-normalizer rule survives.
+- **Don't verify OCR changes with unit tests alone.** `layout.ts` and `postprocess.ts` each passed their own tests while their *composition* produced one run-on paragraph. Run real screenshots end to end before believing an OCR change works.
+- **Don't assume a stem uniquely identifies a word.** `печень` (liver) and `печенье` (cookie) both stem to `печен`; `сладкий` and `сладкое` both to `сладк`. When a seed alias collides with a common word, move it to `exact_aliases` (matched verbatim) rather than deleting it.
 - **Don't delete built-in tags or aliases on seed re-apply.** Only insert missing ones; respect `disabled` flags. User trust depends on this.
 
 ## When making changes
