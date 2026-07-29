@@ -106,4 +106,44 @@ describe('seedFromEntries', () => {
     expect(row.label).toBe('МойПомидор')
     expect(row.source).toBe('user')
   })
+
+  it('stores exact_aliases with match_mode exact', () => {
+    seedFromEntries(db, [
+      {
+        slug: 'dessert',
+        label: 'Десерт',
+        kind: 'dish_type',
+        aliases: ['сладость'],
+        exact_aliases: ['печенье', 'печенья']
+      }
+    ])
+
+    const rows = db
+      .prepare<[], { lemma: string; match_mode: string }>(
+        `SELECT lemma, match_mode FROM tag_aliases WHERE match_mode='exact' ORDER BY lemma`
+      )
+      .all()
+
+    expect(rows.map((r) => r.lemma)).toEqual(['печенье', 'печенья'])
+    expect(rows.every((r) => r.match_mode === 'exact')).toBe(true)
+  })
+
+  it('normalises ё to е in exact aliases', () => {
+    seedFromEntries(db, [
+      { slug: 'x', label: 'X', kind: 'ingredient', aliases: [], exact_aliases: ['Чёрный'] }
+    ])
+    const row = db
+      .prepare<[], { lemma: string }>(`SELECT lemma FROM tag_aliases WHERE match_mode='exact'`)
+      .get()
+    expect(row?.lemma).toBe('черный')
+  })
+
+  it('leaves regular aliases as match_mode stem', () => {
+    seedFromEntries(db, [{ slug: 'y', label: 'Y', kind: 'ingredient', aliases: ['помидоры'] }])
+    const modes = db
+      .prepare<[], { match_mode: string }>('SELECT match_mode FROM tag_aliases')
+      .all()
+      .map((r) => r.match_mode)
+    expect(modes.every((m) => m === 'stem')).toBe(true)
+  })
 })
