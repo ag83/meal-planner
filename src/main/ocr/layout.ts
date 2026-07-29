@@ -97,3 +97,43 @@ export const detectColumnCuts = (words: OcrWord[]): number[] => {
   const cut = findSingleCut(words)
   return cut === null ? [] : [cut]
 }
+
+const VERTICAL_OVERLAP_RATIO = 0.5
+
+const overlapsVertically = (a: OcrWord, b: OcrWord): boolean => {
+  const overlap = Math.min(a.bbox.y1, b.bbox.y1) - Math.max(a.bbox.y0, b.bbox.y0)
+  if (overlap <= 0) return false
+  const shorter = Math.min(a.bbox.y1 - a.bbox.y0, b.bbox.y1 - b.bbox.y0)
+  return shorter > 0 && overlap / shorter >= VERTICAL_OVERLAP_RATIO
+}
+
+const groupIntoLines = (words: OcrWord[]): string[] => {
+  const sorted = [...words].sort((a, b) => a.bbox.y0 - b.bbox.y0)
+  const lines: OcrWord[][] = []
+
+  for (const word of sorted) {
+    const line = lines.find((l) => l.some((w) => overlapsVertically(w, word)))
+    if (line) line.push(word)
+    else lines.push([word])
+  }
+
+  return lines
+    .map((l) => [...l].sort((a, b) => a.bbox.x0 - b.bbox.x0))
+    .sort((a, b) => a[0].bbox.y0 - b[0].bbox.y0)
+    .map((l) => l.map((w) => w.text).join(' '))
+}
+
+export const reconstructLines = (words: OcrWord[]): string[] => {
+  if (words.length === 0) return []
+
+  const cuts = detectColumnCuts(words)
+  if (cuts.length === 0) return groupIntoLines(words)
+
+  const bounds = [-Infinity, ...cuts, Infinity]
+  const out: string[] = []
+  for (let i = 0; i < bounds.length - 1; i++) {
+    const column = words.filter((w) => midpoint(w) >= bounds[i] && midpoint(w) < bounds[i + 1])
+    if (column.length > 0) out.push(...groupIntoLines(column))
+  }
+  return out
+}
