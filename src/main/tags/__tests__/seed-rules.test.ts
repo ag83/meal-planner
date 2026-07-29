@@ -75,3 +75,35 @@ describe('shipped tag rules', () => {
     expect(labelsFor('растительное масло')).toEqual(['Растительное масло'])
   })
 })
+
+describe('honey, orange, cottage cheese and yeast', () => {
+  it('matches мёд in both ё and е spellings', () => {
+    expect(labelsFor('2 ст. л. мёда')).toEqual(['Мёд'])
+    expect(labelsFor('добавьте мед')).toEqual(['Мёд'])
+    // Also picks up Соус, which is correct — assert only the honey part here.
+    expect(labelsFor('медовый соус')).toContain('Мёд')
+  })
+
+  it('matches апельсин and its derived forms', () => {
+    expect(labelsFor('1 апельсин')).toEqual(['Апельсин'])
+    expect(labelsFor('апельсины среднего размера')).toEqual(['Апельсин'])
+    expect(labelsFor('апельсиновая цедра')).toEqual(['Апельсин'])
+    expect(labelsFor('цедра апельсина')).toEqual(['Апельсин'])
+  })
+
+  it('matches творог and its derived forms', () => {
+    expect(labelsFor('200 г творога')).toEqual(['Творог'])
+    expect(labelsFor('творожная масса')).toEqual(['Творог'])
+    expect(labelsFor('творожная запеканка')).toContain('Творог')
+  })
+
+  it('matches дрожжи and its derived forms', () => {
+    expect(labelsFor('дрожжи')).toEqual(['Дрожжи'])
+    expect(labelsFor('11 г сухих дрожжей')).toEqual(['Дрожжи'])
+    expect(labelsFor('дрожжевое тесто')).toEqual(['Дрожжи'])
+  })
+
+  it('does not confuse дрожать with дрожжи', () => {
+    expect(labelsFor('руки дрожат')).toEqual([])
+  })
+})
