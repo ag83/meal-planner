@@ -73,6 +73,31 @@
     - перец сладкий
     - перец
 
+- slug: liver
+  label: Печень
+  kind: ingredient
+  aliases:
+    - печень куриная
+    - куриная печень
+    - печень говяжья
+    - говяжья печень
+
+- slug: tomato_paste
+  label: Томатная паста
+  kind: ingredient
+  aliases:
+    - паста томатная
+    - томат-паста
+
+- slug: black_pepper
+  label: Чёрный перец
+  kind: ingredient
+  aliases:
+    - перец чёрный
+    - перец черный молотый
+    - чёрный молотый перец
+    - молотый перец
+
 - slug: eggplant
   label: Баклажан
   kind: ingredient
@@ -397,8 +422,13 @@
     - выпечка сладкая
     - торт
     - пирожное
-    - печенье
     - кекс
+  # печенье stems to печен, colliding with печень (liver) — match it verbatim instead.
+  exact_aliases:
+    - печенье
+    - печенья
+    - печеньем
+    - печений
 
 - slug: pastry
   label: Выпечка
