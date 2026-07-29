@@ -67,11 +67,11 @@
 - slug: bell_pepper
   label: Болгарский перец
   kind: ingredient
+  # Deliberately no bare "перец" — unqualified pepper is black pepper.
   aliases:
     - перец болгарский
     - сладкий перец
     - перец сладкий
-    - перец
 
 - slug: liver
   label: Печень
@@ -97,6 +97,7 @@
     - перец черный молотый
     - чёрный молотый перец
     - молотый перец
+    - перец
 
 - slug: eggplant
   label: Баклажан
@@ -262,9 +263,10 @@
 - slug: butter
   label: Сливочное масло
   kind: ingredient
+  # Deliberately no bare "масло" — it would swallow оливковое/растительное масло
+  # whenever OCR drops the adjective.
   aliases:
     - масло сливочное
-    - масло
     - маслице
 
 - slug: oil
@@ -293,13 +295,8 @@
     - сахарок
     - сахар белый
 
-- slug: salt
-  label: Соль
-  kind: ingredient
-  aliases:
-    - поваренная соль
-    - морская соль
-    - крупная соль
+# Соль deliberately omitted — it appears in nearly every recipe, so it carries no
+# filtering value. Migration v3 disables it in vaults that already have it.
 
 - slug: rice
   label: Рис

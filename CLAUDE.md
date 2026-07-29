@@ -105,6 +105,8 @@ Seed re-application on upgrade is **strictly additive**: insert missing built-in
 - **Don't put OCR text repair in `tags/normalize.ts`.** De-hyphenation and line joining live in `src/main/ocr/postprocess.ts`, upstream of both display and matching, so the single-normalizer rule survives.
 - **Don't verify OCR changes with unit tests alone.** `layout.ts` and `postprocess.ts` each passed their own tests while their *composition* produced one run-on paragraph. Run real screenshots end to end before believing an OCR change works.
 - **Don't assume a stem uniquely identifies a word.** `печень` (liver) and `печенье` (cookie) both stem to `печен`; `сладкий` and `сладкое` both to `сладк`. When a seed alias collides with a common word, move it to `exact_aliases` (matched verbatim) rather than deleting it.
+- **Don't re-add bare `перец`, bare `масло`, or a `Соль` tag to the seed.** All three were removed deliberately: unqualified `перец` means Чёрный перец (Болгарский перец requires `сладкий`/`болгарский`), unqualified `масло` matches nothing so it cannot swallow `оливковое масло`, and Соль appears in nearly every recipe so it carries no filtering value. See migration v3.
+- **Editing `resources/seed-tags.yaml` cannot remove anything from an existing vault.** The seed loader is additive by design, so deletions and alias re-assignments need a migration that disables the old `source='builtin'` rows. After a rules change, users must run **Retag all** in Settings for existing recipes to pick it up.
 - **Don't delete built-in tags or aliases on seed re-apply.** Only insert missing ones; respect `disabled` flags. User trust depends on this.
 
 ## When making changes

@@ -70,6 +70,28 @@ const MIGRATIONS: Migration[] = [
       ALTER TABLE tag_aliases ADD COLUMN match_mode TEXT NOT NULL DEFAULT 'stem'
         CHECK(match_mode IN ('stem','exact'));
     `)
+  },
+  // v1 → v2 seeding is additive, so corrections to built-in rules cannot reach
+  // existing vaults through resources/seed-tags.yaml alone. Lemmas below are the
+  // stemmed forms as stored (перец→перец, масло→масл, соль→сол); they are written
+  // as literals so a future stemmer change cannot silently retarget this migration.
+  // Only source='builtin' rows are touched — user aliases are never disabled here.
+  (db) => {
+    db.exec(`
+      UPDATE tag_aliases SET disabled = 1
+        WHERE source = 'builtin' AND lemma = 'перец'
+          AND tag_id = (SELECT id FROM tags WHERE slug = 'bell_pepper');
+
+      UPDATE tag_aliases SET disabled = 1
+        WHERE source = 'builtin' AND lemma = 'масл'
+          AND tag_id = (SELECT id FROM tags WHERE slug = 'butter');
+
+      UPDATE tag_aliases SET disabled = 1
+        WHERE source = 'builtin'
+          AND tag_id = (SELECT id FROM tags WHERE slug = 'salt');
+
+      UPDATE tags SET disabled = 1 WHERE slug = 'salt' AND source = 'builtin';
+    `)
   }
 ]
 

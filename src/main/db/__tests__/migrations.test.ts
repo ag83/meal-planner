@@ -31,9 +31,9 @@ describe('runMigrations', () => {
     expect(tables).toContain('recipe_tag_suppressions')
   })
 
-  it('sets user_version to 2 after migration', () => {
+  it('sets user_version to 3 after migration', () => {
     runMigrations(db)
-    expect(db.pragma('user_version', { simple: true }) as number).toBe(2)
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(3)
   })
 
   it('tag_aliases has match_mode defaulting to stem', () => {
@@ -136,5 +136,95 @@ describe('runMigrations', () => {
       .prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM recipe_tags')
       .get()!.n
     expect(count).toBe(0)
+  })
+})
+
+describe('v2 → v3 tag rule corrections', () => {
+  const seedV2 = (): void => {
+    runMigrations(db)
+    db.pragma('user_version = 2')
+    const insertTag = db.prepare(
+      `INSERT INTO tags (slug, label, kind, source, created_at) VALUES (?,?,'ingredient','builtin',1)`
+    )
+    for (const [slug, label] of [
+      ['bell_pepper', 'Болгарский перец'],
+      ['butter', 'Сливочное масло'],
+      ['salt', 'Соль']
+    ]) {
+      insertTag.run(slug, label)
+    }
+    const idOf = (slug: string): number =>
+      db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get(slug)!.id
+    const insertAlias = db.prepare(
+      `INSERT INTO tag_aliases (tag_id, lemma, is_primary, source, match_mode) VALUES (?,?,0,?, 'stem')`
+    )
+    insertAlias.run(idOf('bell_pepper'), 'перец', 'builtin')
+    insertAlias.run(idOf('bell_pepper'), 'сладк перец', 'builtin')
+    insertAlias.run(idOf('butter'), 'масл', 'builtin')
+    insertAlias.run(idOf('butter'), 'масл сливочн', 'builtin')
+    insertAlias.run(idOf('salt'), 'сол', 'builtin')
+  }
+
+  const isDisabled = (slug: string, lemma: string): number =>
+    db
+      .prepare<[string, string], { disabled: number }>(
+        'SELECT disabled FROM tag_aliases WHERE lemma=? AND tag_id=(SELECT id FROM tags WHERE slug=?)'
+      )
+      .get(lemma, slug)!.disabled
+
+  it('disables the bare перец alias on Болгарский перец', () => {
+    seedV2()
+    runMigrations(db)
+    expect(isDisabled('bell_pepper', 'перец')).toBe(1)
+  })
+
+  it('leaves the qualified сладкий перец alias enabled', () => {
+    seedV2()
+    runMigrations(db)
+    expect(isDisabled('bell_pepper', 'сладк перец')).toBe(0)
+  })
+
+  it('disables the bare масло alias on Сливочное масло', () => {
+    seedV2()
+    runMigrations(db)
+    expect(isDisabled('butter', 'масл')).toBe(1)
+    expect(isDisabled('butter', 'масл сливочн')).toBe(0)
+  })
+
+  it('disables the salt tag and its aliases', () => {
+    seedV2()
+    runMigrations(db)
+    expect(isDisabled('salt', 'сол')).toBe(1)
+    const tag = db
+      .prepare<[], { disabled: number }>(`SELECT disabled FROM tags WHERE slug='salt'`)
+      .get()
+    expect(tag?.disabled).toBe(1)
+  })
+
+  it('does not touch user-created aliases with the same lemma', () => {
+    seedV2()
+    const bellId = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('bell_pepper')!.id
+    db.prepare(
+      `INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('mine','Мой','ingredient','user',1)`
+    ).run()
+    const mineId = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('mine')!.id
+    db.prepare(
+      `INSERT INTO tag_aliases (tag_id,lemma,is_primary,source,match_mode) VALUES (?,'перец',0,'user','stem')`
+    ).run(mineId)
+
+    runMigrations(db)
+
+    expect(isDisabled('mine', 'перец')).toBe(0)
+    expect(isDisabled('bell_pepper', 'перец')).toBe(1)
+    expect(bellId).not.toBe(mineId)
+  })
+
+  it('is a no-op on a fresh vault with none of those rows', () => {
+    expect(() => runMigrations(db)).not.toThrow()
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(3)
   })
 })
