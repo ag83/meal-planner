@@ -58,20 +58,29 @@ Until Phase 1 lands, `package.json` is a stub — don't run scripts expecting th
 
 ## Git workflow
 
-### Branching — Gitflow
+### Branching — GitHub Flow
 
-| Branch | Purpose | Branches from | Merges into |
-|---|---|---|---|
-| `master` | Released, tagged state. Never commit directly. | — | — |
-| `develop` | Integration branch; the default target for everyday work. | `master` | `master` (via release) |
-| `feature/<slug>` | One feature or fix. | `develop` | `develop` |
-| `release/<version>` | Version stabilisation, bumps, changelog. | `develop` | `master` **and** `develop` |
-| `hotfix/<slug>` | Urgent production fix. | `master` | `master` **and** `develop` |
+**`develop` is the trunk.** It is always in a working, releasable state: `typecheck`,
+`lint`, `test` and `build` all pass on every commit. `master` holds released snapshots
+only.
 
-- Never commit straight to `master` or `develop` — always branch first.
-- Slugs are kebab-case and describe the outcome: `feature/ocr-reading-order`, `hotfix/thumbnail-crash`.
-- Merge feature branches with `--no-ff` so the branch boundary stays visible in history.
+1. Branch off `develop` for any change — feature, fix, docs, chore alike.
+2. Commit in small steps, pushing early so the work is visible.
+3. Open a PR back into `develop` when ready for review.
+4. Merge once green, then delete the branch.
+5. Release by merging `develop` into `master` and tagging.
+
+- **Never commit directly to `develop` or `master`** — always branch first, even for a
+  one-line fix.
+- Branch names are kebab-case and describe the outcome, no type prefix required:
+  `ocr-reading-order`, `thumbnail-crash-fix`, `tag-rule-corrections`.
+- Branches are **short-lived** — hours or days, not weeks. A long-running branch means
+  the change should have been split.
+- Merge with `--no-ff` so the branch boundary stays visible in history.
 - Tag releases on `master` as `v<major>.<minor>.<patch>`, matching `package.json`.
+
+There are no `release/*` or `hotfix/*` branches. An urgent fix is just another short
+branch off `develop`, merged and released the same way.
 
 ### Commit messages — Conventional Commits
 
