@@ -31,10 +31,68 @@ describe('runMigrations', () => {
     expect(tables).toContain('recipe_tag_suppressions')
   })
 
-  it('sets user_version to 1 after migration', () => {
+  it('sets user_version to 2 after migration', () => {
     runMigrations(db)
-    const version = db.pragma('user_version', { simple: true }) as number
-    expect(version).toBe(1)
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(2)
+  })
+
+  it('tag_aliases has match_mode defaulting to stem', () => {
+    runMigrations(db)
+    db.prepare(
+      `INSERT INTO tags (slug, label, kind, source, created_at) VALUES ('t1','T','ingredient','builtin',1)`
+    ).run()
+    const tagId = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('t1')!
+      .id
+    db.prepare(
+      `INSERT INTO tag_aliases (tag_id, lemma, is_primary, source) VALUES (?,'лемма',1,'builtin')`
+    ).run(tagId)
+    const row = db.prepare<[], { match_mode: string }>('SELECT match_mode FROM tag_aliases').get()
+    expect(row?.match_mode).toBe('stem')
+  })
+
+  it('tag_aliases rejects an unknown match_mode', () => {
+    runMigrations(db)
+    db.prepare(
+      `INSERT INTO tags (slug, label, kind, source, created_at) VALUES ('t1','T','ingredient','builtin',1)`
+    ).run()
+    const tagId = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('t1')!
+      .id
+    expect(() => {
+      db.prepare(
+        `INSERT INTO tag_aliases (tag_id, lemma, is_primary, source, match_mode) VALUES (?,'лемма',1,'builtin','bogus')`
+      ).run(tagId)
+    }).toThrow()
+  })
+
+  it('migrates a v1 database without losing alias rows', () => {
+    db.exec(`
+      CREATE TABLE tags (
+        id INTEGER PRIMARY KEY, slug TEXT NOT NULL UNIQUE, label TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK(kind IN ('ingredient','dish_type','cuisine','user')),
+        source TEXT NOT NULL CHECK(source IN ('builtin','user')),
+        disabled INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL
+      );
+      CREATE TABLE tag_aliases (
+        id INTEGER PRIMARY KEY,
+        tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+        lemma TEXT NOT NULL, is_primary INTEGER NOT NULL DEFAULT 0,
+        source TEXT NOT NULL CHECK(source IN ('builtin','user')),
+        disabled INTEGER NOT NULL DEFAULT 0, UNIQUE(tag_id, lemma)
+      );
+      INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('t1','T','ingredient','builtin',1);
+      INSERT INTO tag_aliases (tag_id,lemma,is_primary,source) VALUES (1,'старая лемма',1,'builtin');
+    `)
+    db.pragma('user_version = 1')
+
+    runMigrations(db)
+
+    const row = db
+      .prepare<[], { lemma: string; match_mode: string }>(
+        'SELECT lemma, match_mode FROM tag_aliases'
+      )
+      .get()
+    expect(row?.lemma).toBe('старая лемма')
+    expect(row?.match_mode).toBe('stem')
   })
 
   it('is idempotent — running twice does not throw', () => {
