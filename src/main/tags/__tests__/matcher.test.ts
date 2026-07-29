@@ -28,6 +28,29 @@ const SEED: SeedEntry[] = [
   }
 ]
 
+const EXTRA_SEED: SeedEntry[] = [
+  {
+    slug: 'liver',
+    label: 'Печень',
+    kind: 'ingredient',
+    aliases: ['печень куриная', 'куриная печень']
+  },
+  {
+    slug: 'tomato_paste',
+    label: 'Томатная паста',
+    kind: 'ingredient',
+    aliases: ['паста томатная', 'томатная паста']
+  },
+  { slug: 'pasta', label: 'Макароны', kind: 'ingredient', aliases: ['паста', 'спагетти'] },
+  {
+    slug: 'dessert',
+    label: 'Десерт',
+    kind: 'dish_type',
+    aliases: ['сладкое', 'сладость'],
+    exact_aliases: ['печенье', 'печенья', 'печеньем']
+  }
+]
+
 beforeEach(() => {
   db = new Database(':memory:')
   db.pragma('foreign_keys = ON')
@@ -104,5 +127,39 @@ describe('extractTags', () => {
   it('returns no matches for text with no known ingredients', () => {
     const matches = extractTags(db, 'lorem ipsum dolor sit amet')
     expect(matches).toEqual([])
+  })
+})
+
+describe('extractTags precision', () => {
+  beforeEach(() => {
+    seedFromEntries(db, EXTRA_SEED)
+  })
+
+  it('сладкий перец matches only Болгарский перец, not Десерт', () => {
+    const ids = extractTags(db, '1 сладкий перец').map((m) => m.tagId)
+    expect(ids).toContain(tagIdFor('bell_pepper'))
+    expect(ids).not.toContain(tagIdFor('dessert'))
+  })
+
+  it('паста томатная matches Томатная паста, not Макароны', () => {
+    const ids = extractTags(db, 'паста томатная - 2 ст. л.').map((m) => m.tagId)
+    expect(ids).toContain(tagIdFor('tomato_paste'))
+    expect(ids).not.toContain(tagIdFor('pasta'))
+  })
+
+  it('печень does not match Десерт via the печенье stem collision', () => {
+    const ids = extractTags(db, 'печень куриная - 500 г').map((m) => m.tagId)
+    expect(ids).toContain(tagIdFor('liver'))
+    expect(ids).not.toContain(tagIdFor('dessert'))
+  })
+
+  it('печенье still matches Десерт through its exact alias', () => {
+    const ids = extractTags(db, 'подать печенье к чаю').map((m) => m.tagId)
+    expect(ids).toContain(tagIdFor('dessert'))
+  })
+
+  it('bare спагетти still matches Макароны', () => {
+    const ids = extractTags(db, 'отварите спагетти').map((m) => m.tagId)
+    expect(ids).toContain(tagIdFor('pasta'))
   })
 })
