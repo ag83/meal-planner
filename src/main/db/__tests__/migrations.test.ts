@@ -31,9 +31,9 @@ describe('runMigrations', () => {
     expect(tables).toContain('recipe_tag_suppressions')
   })
 
-  it('sets user_version to 5 after migration', () => {
+  it('sets user_version to 6 after migration', () => {
     runMigrations(db)
-    expect(db.pragma('user_version', { simple: true }) as number).toBe(5)
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(6)
   })
 
   it('tag_aliases has match_mode defaulting to stem', () => {
@@ -184,11 +184,19 @@ describe('v2 → v3 tag rule corrections', () => {
     expect(isDisabled('bell_pepper', 'сладк перец')).toBe(0)
   })
 
-  it('disables the bare масло alias on Сливочное масло', () => {
+  it('removes Сливочное масло entirely once the full migration chain runs', () => {
+    // Butter's bare "масло" alias was corrected in v3 (disable it, keep the
+    // qualified one), but v5->v6 later hard-deletes the whole 'butter' slug —
+    // see migrations.ts. seedV2() always replays every pending migration, so
+    // the only observable end state here is full removal, not the
+    // intermediate v3 disable. The v3 correction itself stays covered by the
+    // bell_pepper and salt cases above/below, whose slugs v6 doesn't touch.
     seedV2()
     runMigrations(db)
-    expect(isDisabled('butter', 'масл')).toBe(1)
-    expect(isDisabled('butter', 'масл сливочн')).toBe(0)
+    const tag = db
+      .prepare<[], { n: number }>(`SELECT COUNT(*) AS n FROM tags WHERE slug='butter'`)
+      .get()
+    expect(tag?.n).toBe(0)
   })
 
   it('disables the salt tag and its aliases', () => {
@@ -225,7 +233,7 @@ describe('v2 → v3 tag rule corrections', () => {
 
   it('is a no-op on a fresh vault with none of those rows', () => {
     expect(() => runMigrations(db)).not.toThrow()
-    expect(db.pragma('user_version', { simple: true }) as number).toBe(5)
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(6)
   })
 })
 
@@ -307,5 +315,115 @@ describe('v3 → v4 disables the Соус tag', () => {
       )
       .get(id)
     expect(mine?.disabled).toBe(0)
+  })
+})
+
+describe('v5 → v6 recreates the ingredient tag catalog', () => {
+  it('hard-deletes retired builtin ingredient tags, cascading to aliases and recipe_tags', () => {
+    runMigrations(db)
+    db.pragma('user_version = 5')
+    db.prepare(
+      `INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('garlic','Чеснок','ingredient','builtin',1)`
+    ).run()
+    const garlicId = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('garlic')!.id
+    db.prepare(
+      `INSERT INTO tag_aliases (tag_id,lemma,is_primary,source,match_mode) VALUES (?,?,1,'builtin','stem')`
+    ).run(garlicId, 'чеснок')
+    db.prepare(
+      `INSERT INTO recipes (id,ext,sha256,created_at,updated_at) VALUES ('r1','jpg','abc',1,1)`
+    ).run()
+    db.prepare(
+      `INSERT INTO recipe_tags (recipe_id,tag_id,confidence,source) VALUES ('r1',?,1.0,'ocr')`
+    ).run(garlicId)
+
+    runMigrations(db)
+
+    const tagRow = db
+      .prepare<[], { n: number }>(`SELECT COUNT(*) AS n FROM tags WHERE slug='garlic'`)
+      .get()
+    expect(tagRow?.n).toBe(0)
+    const aliasRow = db
+      .prepare<[number], { n: number }>('SELECT COUNT(*) AS n FROM tag_aliases WHERE tag_id=?')
+      .get(garlicId)
+    expect(aliasRow?.n).toBe(0)
+    const recipeTagRow = db
+      .prepare<[string], { n: number }>('SELECT COUNT(*) AS n FROM recipe_tags WHERE recipe_id=?')
+      .get('r1')
+    expect(recipeTagRow?.n).toBe(0)
+  })
+
+  it('deletes all 13 retired builtin ingredient slugs, keeping Картофель, Лук, Бекон, Петрушка, and Дрожжи', () => {
+    runMigrations(db)
+    db.pragma('user_version = 5')
+    const retired = [
+      'garlic', 'carrot', 'tomato_paste', 'beet', 'fish',
+      'butter', 'oil', 'flour', 'sugar', 'rice', 'pasta', 'bread', 'dill'
+    ]
+    const kept = ['potato', 'onion', 'bacon', 'parsley', 'yeast']
+    const insertTag = db.prepare(
+      `INSERT INTO tags (slug,label,kind,source,created_at) VALUES (?,?,'ingredient','builtin',1)`
+    )
+    for (const slug of retired) insertTag.run(slug, slug)
+    for (const slug of kept) insertTag.run(slug, slug)
+
+    runMigrations(db)
+
+    const remaining = db
+      .prepare<[], { slug: string }>('SELECT slug FROM tags')
+      .all()
+      .map((r) => r.slug)
+    for (const slug of retired) expect(remaining).not.toContain(slug)
+    for (const slug of kept) expect(remaining).toContain(slug)
+  })
+
+  it('removes the стручковая фасоль alias from Фасоль without touching the tag', () => {
+    runMigrations(db)
+    db.pragma('user_version = 5')
+    db.prepare(
+      `INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('beans','Фасоль','ingredient','builtin',1)`
+    ).run()
+    const beansId = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('beans')!.id
+    db.prepare(
+      `INSERT INTO tag_aliases (tag_id,lemma,is_primary,source,match_mode) VALUES (?,?,1,'builtin','stem')`
+    ).run(beansId, 'фасол')
+    db.prepare(
+      `INSERT INTO tag_aliases (tag_id,lemma,is_primary,source,match_mode) VALUES (?,?,0,'builtin','stem')`
+    ).run(beansId, 'стручков фасол')
+
+    runMigrations(db)
+
+    const remaining = db
+      .prepare<[number], { lemma: string }>('SELECT lemma FROM tag_aliases WHERE tag_id=?')
+      .all(beansId)
+      .map((r) => r.lemma)
+    expect(remaining).toEqual(['фасол'])
+    const tag = db
+      .prepare<[], { disabled: number }>(`SELECT disabled FROM tags WHERE slug='beans'`)
+      .get()
+    expect(tag?.disabled).toBe(0)
+  })
+
+  it('leaves a user-created tag with a retired slug untouched', () => {
+    runMigrations(db)
+    db.pragma('user_version = 5')
+    db.prepare(
+      `INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('garlic','Чеснок','ingredient','user',1)`
+    ).run()
+
+    runMigrations(db)
+
+    const row = db
+      .prepare<[], { n: number }>(`SELECT COUNT(*) AS n FROM tags WHERE slug='garlic'`)
+      .get()
+    expect(row?.n).toBe(1)
+  })
+
+  it('is a no-op on a fresh vault with none of those rows', () => {
+    expect(() => runMigrations(db)).not.toThrow()
+    expect(db.pragma('user_version', { simple: true }) as number).toBe(6)
   })
 })
