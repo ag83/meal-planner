@@ -743,6 +743,8 @@ Expected: PASS, logging `recorded beef-three-column: 6 blocks` and `recorded por
 
 Confirm they exist and are non-trivial: `ls -la src/main/ocr/__tests__/fixtures/*.blocks.json`
 
+**Deviation found and fixed here, not anticipated by the plan:** the recorder's `createWorker()` call has no `cachePath` (unlike `worker.ts`'s real pool, which sets one under `app.getPath('userData')`), so tesseract.js downloads `rus.traineddata` into the process's cwd — the repo root. Add `*.traineddata` to `.gitignore` and delete the stray file; otherwise it reappears as an untracked file every time `npm run ocr:record` runs.
+
 - [ ] **Step 4: Write the integration test**
 
 Every expected string below was observed from a real run of this exact pipeline (`preprocessImage` → `PSM.AUTO` → `rus` → `blocksToLines` → `joinLines`).
