@@ -856,6 +856,8 @@ Three entries in `CLAUDE.md` describe the code this plan deletes. Leaving them w
 **Files:**
 - Modify: `CLAUDE.md:120`, `CLAUDE.md:164`, plus a new pitfall and a language note.
 
+**Deviation found and fixed here, not anticipated by the plan:** `CLAUDE.md:9` ("Russian-first: OCR defaults to `rus+eng`") and `CLAUDE.md:17` ("tesseract.js for OCR (worker pool in main, default `rus+eng`)") also state the old default and are not in the plan's file list. Both changed to `rus` (line 9 additionally notes "Cyrillic only — see pitfalls") so Step 5's `grep -rn "rus+eng" CLAUDE.md src/` check is actually clean rather than incidentally passing while stale text survives elsewhere in the file.
+
 - [ ] **Step 1: Fix the data-flow description**
 
 `CLAUDE.md:120` currently reads `… OCR (2× upscale → PSM 3 → `ocr/layout.ts` reorders columns → `ocr/postprocess.ts` de-hyphenates) …`. Replace that parenthetical with:

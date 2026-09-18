@@ -6,7 +6,7 @@ Guidance for future Claude Code sessions working in this repo. Read `docs/SPECS.
 
 **Meal Planner** — a local-first Electron + React + Tailwind desktop app. Users add recipes as photos; the app OCRs them, **auto-extracts tags** from a curated Russian-first dictionary, and offers tag-based search via a multi-select combobox.
 
-No server, no accounts, no telemetry. Everything lives in the vault folder the user picks on first run. **Russian-first**: OCR defaults to `rus+eng`, tag library and matching are morphology-aware (Snowball Russian stemmer).
+No server, no accounts, no telemetry. Everything lives in the vault folder the user picks on first run. **Russian-first**: OCR defaults to `rus` (Cyrillic only — see pitfalls), tag library and matching are morphology-aware (Snowball Russian stemmer).
 
 ## Stack at a glance
 
@@ -14,7 +14,7 @@ No server, no accounts, no telemetry. Everything lives in the vault folder the u
 - **React 19 + TypeScript**, **Tailwind v4**, Radix primitives, lucide icons
 - **[electron-vite](https://electron-vite.org/)** for the build (main / preload / renderer all bundled via Vite)
 - **better-sqlite3** — relational storage for recipes, tags, aliases, recipe_tags
-- **tesseract.js** for OCR (worker pool in main, default `rus+eng`)
+- **tesseract.js** for OCR (worker pool in main, default `rus`)
 - **`natural`** (`PorterStemmerRu`) for Russian stemming; `Intl.Segmenter` for Unicode word boundaries
 - **`js-yaml`** for parsing the bundled `resources/seed-tags.yaml`
 - **sharp** for thumbnails and image dimensions
@@ -117,7 +117,7 @@ BREAKING CHANGE: schemaVersion 1 → 2; older builds refuse the vault.
 ## Data flow cheatsheet
 
 1. User drops images on the gallery → renderer collects paths → `window.api.recipes.ingest(paths)`.
-2. Main ingestion pipeline: hash → dedupe → copy to `pictures/` → thumb to `thumbs/` → OCR (2× upscale → PSM 3 → `ocr/layout.ts` reorders columns → `ocr/postprocess.ts` de-hyphenates) → **`tags/matcher.ts` extracts tag IDs** → INSERT `recipes` + `recipe_tags` → emit `ingest:progress`.
+2. Main ingestion pipeline: hash → dedupe → copy to `pictures/` → thumb to `thumbs/` → OCR (2× upscale → PSM 3 → `ocr/blocks.ts` reads Tesseract's block structure → `ocr/postprocess.ts` de-hyphenates) → **`tags/matcher.ts` extracts tag IDs** → INSERT `recipes` + `recipe_tags` → emit `ingest:progress`.
 3. Renderer listens for `ingest:progress`, `vault:changed`, `tags:changed` to refresh the relevant stores.
 4. Search: user types in the `TagCombobox` → IPC `tags.suggest(prefix)` returns canonical tags (label only, never aliases) → user picks tags → `useTagFilterStore` holds selected IDs → IPC `recipes.filterByTags(ids, mode)` returns the filtered gallery. **AND is the default** mode; OR is a toggle.
 
@@ -160,8 +160,11 @@ Seed re-application on upgrade is **strictly additive**: insert missing built-in
 - **Don't show alias surface forms in the UI.** The dropdown, the chips, the tag library — all display `tags.label`. Aliases are an implementation detail of matching. (See SPECS §3.4 FR-S2.)
 - **Don't write a second Russian normalizer.** Every code path that compares Russian text against the tag library must go through `src/main/tags/normalize.ts`. Duplicating the rules (a stemmer call here, a `ё→е` there) silently breaks recall.
 - **Don't rely on tesseract.js's default page segmentation.** It ships `PSM.SINGLE_BLOCK` (6), which performs no page layout analysis and reads multi-column pages straight across the columns. `src/main/ocr/worker.ts` sets `PSM.AUTO` (3) explicitly. Never remove that call.
+- **Don't re-derive page layout from word geometry.** Tesseract's `PSM.AUTO` already returns `blocks` segmented and in reading order; `src/main/ocr/blocks.ts` reads that directly. A previous design flattened the structure away and rebuilt it from word bounding boxes, which could express only a single column split and glued adjacent columns on three-column pages. Measured on a real page, Tesseract's own segmentation was correct and the geometric replacement was not.
+- **Don't add `eng` back to the OCR language.** `src/main/ocr/worker.ts` sets `DEFAULT_LANG = 'rus'`. Including `eng` keeps Latin glyphs in the candidate set for every character and produces `500 I` for `500 г`, `TaKже` for `также`, `A0` for `до`. A recipe genuinely containing English can be re-run per-recipe through the `lang` argument of `recipes:reOcr`.
+- **Known OCR residue, deliberately not fixed:** `®` and `е` appear where the source has `•` (display only — `tokenize` discards single-character tokens, so the matcher never sees them); `400 г томатов` may come through as `ГТОматов`, losing that occurrence's `томат` match; low-confidence words are dropped by the `DEFAULT_MIN_CONFIDENCE = 50` filter, which cost `свитой` from one title during testing.
 - **Don't put OCR text repair in `tags/normalize.ts`.** De-hyphenation and line joining live in `src/main/ocr/postprocess.ts`, upstream of both display and matching, so the single-normalizer rule survives.
-- **Don't verify OCR changes with unit tests alone.** `layout.ts` and `postprocess.ts` each passed their own tests while their *composition* produced one run-on paragraph. Run real screenshots end to end before believing an OCR change works.
+- **Don't verify OCR changes with unit tests alone.** The former `layout.ts` and `postprocess.ts` each passed their own tests while their *composition* produced one run-on paragraph. `src/main/ocr/__tests__/reconstruction.test.ts` now exercises the real composition against recorded fixtures; run `npm run ocr:record` and re-check them after any change to preprocessing, PSM, or the engine.
 - **Don't assume a stem uniquely identifies a word.** `печень` (liver) and `печенье` (cookie) both stem to `печен`; `сладкий` and `сладкое` both to `сладк`. When a seed alias collides with a common word, move it to `exact_aliases` (matched verbatim) rather than deleting it.
 - **Migration v6 hard-deletes 13 builtin ingredient tags** (`garlic, carrot, tomato_paste, beet, fish, butter, oil, flour, sugar, rice, pasta, bread, dill`) instead of disabling them — a deliberate, one-off exception to the disable-don't-delete rule below, made at explicit user request with full awareness it destroys `recipe_tags` history for those tags on existing vaults. Картофель, Лук, Бекон, Петрушка, and Дрожжи were on the original candidate list too but were kept at explicit user request (across two rounds of follow-up) despite not being part of the curated 55-word list. Don't treat any of this as a new default: every other retirement (Соль, Соус, Чёрный перец, and any future one) should still disable, not delete.
 - **Don't re-add bare `перец`, bare `масло`, or a `Соль` tag to the seed.** All three were removed deliberately: unqualified `перец` means Чёрный перец (Болгарский перец requires `сладкий`/`болгарский`), unqualified `масло` matches nothing so it cannot swallow `оливковое масло`, and Соль appears in nearly every recipe so it carries no filtering value. See migration v3.
