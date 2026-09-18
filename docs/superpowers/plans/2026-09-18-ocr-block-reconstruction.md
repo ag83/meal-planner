@@ -113,15 +113,26 @@ const IMAGE = path.join(
 )
 
 describe('preprocessImage', () => {
-  it('upscales by UPSCALE and converts to single-channel greyscale', async () => {
+  it('upscales by UPSCALE', async () => {
     const original = await sharp(IMAGE).metadata()
     const out = await sharp(await preprocessImage(IMAGE)).metadata()
 
     expect(out.width).toBe(original.width! * UPSCALE)
-    expect(out.channels).toBe(1)
+  })
+
+  it('desaturates to greyscale', async () => {
+    // sharp's .greyscale() equalises R/G/B rather than re-encoding to a
+    // single-channel PNG, so the real invariant is equal channel means, not
+    // metadata().channels === 1.
+    const stats = await sharp(await preprocessImage(IMAGE)).stats()
+    const [r, g, b] = stats.channels.map((c) => c.mean)
+    expect(r).toBeCloseTo(g, 1)
+    expect(g).toBeCloseTo(b, 1)
   })
 })
 ```
+
+**Deviation note:** the original plan asserted `metadata().channels === 1`. Verified against the actual sharp output: `.greyscale()` desaturates (R=G=B) but keeps a 3-channel sRGB PNG encoding in the installed sharp version — this is existing, unchanged behavior, not a regression. The test above asserts the real invariant instead.
 
 This test needs the fixture image, which Task 4 formally introduces. Add it now so this task is self-contained:
 
