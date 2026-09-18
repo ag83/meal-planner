@@ -205,7 +205,8 @@ take the simpler path: re-initialise on mismatch, since non-default languages ar
 |---|---|
 | `src/main/ocr/layout.ts` | deleted |
 | `src/main/ocr/blocks.ts` | new — types, `DEFAULT_MIN_CONFIDENCE`, `blocksToLines` |
-| `src/main/ocr/worker.ts` | `LANG='rus'`; `runOcr(path, lang)`; calls `blocksToLines` |
+| `src/main/ocr/preprocess.ts` | new — `preprocessImage`, extracted from `worker.ts`; no `electron` import |
+| `src/main/ocr/worker.ts` | `LANG='rus'`; `runOcr(path, lang)`; calls `preprocessImage` + `blocksToLines` |
 | `src/main/ocr/postprocess.ts` | unchanged |
 | `src/main/ingest/pipeline.ts` | pass lang through; `ocr_lang` from result |
 | `src/main/ipc/recipes.ts` | pass `lang` into `runOcr` |
@@ -252,17 +253,28 @@ resolution (downscaling would change OCR output and void the fixture's purpose):
 ≈2.5 MB total. Acceptable for fixtures that pin OCR behaviour across engine and preprocessing
 changes.
 
-### Recorder must run under the test ABI
+### Recorder must import the real preprocessing, not restate it
 
-`sharp` and `better-sqlite3` are native modules, and this repo rebuilds them **between Electron
-and Node ABIs** around the test run (`postinstall` and `posttest` build for Electron; `pretest`
-builds for Node). A bare `node scripts/record-ocr-fixtures.mjs` would therefore hit `sharp`
-compiled for the wrong ABI, the same `NODE_MODULE_VERSION` mismatch already observed in this
-repo.
+Native-module ABI is *not* the constraint here. `sharp` is N-API and runs unmodified under bare
+Node (verified: `node -e "require('sharp')…"` succeeds under Node 20 with no rebuild);
+`tesseract.js` is JS plus WASM. Only `better-sqlite3` needs the Electron↔Node rebuild dance, and
+the recorder has no reason to touch the database.
 
-The recorder must consequently run through the same entry point as the test suite — a Vitest
-file excluded from the default run and invoked explicitly — rather than as a standalone Node
-script. Exact mechanism is left to the implementation plan.
+The real constraint is drift. Fixtures are only meaningful if recorded through **the same
+preprocessing production uses** — the 2× lanczos upscale, greyscale and normalise in
+`worker.ts:18-27`. A standalone `scripts/*.mjs` recorder cannot import that TypeScript, so it
+would have to restate those `sharp` calls, and the copy would silently diverge the first time
+preprocessing is tuned. That is precisely the failure mode `CLAUDE.md` already records for
+`layout.ts` + `postprocess.ts`: two components each correct alone, wrong in composition.
+
+Two consequences:
+
+1. **Extract preprocessing.** `preprocessImage(imagePath: string): Promise<Buffer>` moves out of
+   `worker.ts` into `src/main/ocr/preprocess.ts`, which must not import `electron` so that
+   non-Electron callers can use it. `worker.ts` imports it.
+2. **Run the recorder through Vitest,** so it can import that TypeScript module directly. It
+   lives outside the default suite via a separate config, keeping `npm test` free of model
+   downloads and multi-second runs.
 
 ## Accepted residue
 
