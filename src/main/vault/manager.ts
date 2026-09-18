@@ -6,7 +6,7 @@ import { initDb } from '../db/connection'
 import { seedFromFile } from '../tags/seed'
 import { reconcile } from './reconcile'
 
-const CURRENT_SCHEMA_VERSION = 5
+const CURRENT_SCHEMA_VERSION = 6
 
 class VaultManager {
   private current: VaultInfo | null = null

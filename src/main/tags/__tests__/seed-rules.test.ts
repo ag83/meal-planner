@@ -68,18 +68,8 @@ describe('shipped tag rules', () => {
     expect(labelsFor('чёрный молотый перец и сладкий перец')).toEqual(['Болгарский перец'])
   })
 
-  it('оливковое масло is Растительное масло, not Сливочное', () => {
-    expect(labelsFor('оливковое масло')).toEqual(['Растительное масло'])
-    expect(labelsFor('масло оливковое')).toEqual(['Растительное масло'])
-  })
-
   it('bare масло matches nothing', () => {
     expect(labelsFor('добавьте масло')).toEqual([])
-  })
-
-  it('still recognises qualified butter and vegetable oil', () => {
-    expect(labelsFor('сливочное масло')).toEqual(['Сливочное масло'])
-    expect(labelsFor('растительное масло')).toEqual(['Растительное масло'])
   })
 })
 
@@ -164,7 +154,6 @@ describe('фасоль, фарш and бекон', () => {
     expect(labelsFor('банка фасоли')).toEqual(['Фасоль'])
     expect(labelsFor('с фасолью')).toEqual(['Фасоль'])
     expect(labelsFor('красная фасоль')).toEqual(['Фасоль'])
-    expect(labelsFor('стручковая фасоль')).toEqual(['Фасоль'])
   })
 
   it('matches the фасолевый adjective, which stems differently', () => {
@@ -185,5 +174,61 @@ describe('фасоль, фарш and бекон', () => {
     expect(labelsFor('бекон')).toEqual(['Бекон'])
     expect(labelsFor('полоски бекона')).toEqual(['Бекон'])
     expect(labelsFor('обжарить с беконом')).toEqual(['Бекон'])
+  })
+})
+
+describe('recreated ingredient catalog (v6)', () => {
+  it('has none of the 13 retired ingredient tags', () => {
+    const retired = [
+      'garlic', 'carrot', 'tomato_paste', 'beet', 'fish',
+      'butter', 'oil', 'flour', 'sugar', 'rice', 'pasta', 'bread', 'dill'
+    ]
+    const slugs = db
+      .prepare<[], { slug: string }>('SELECT slug FROM tags')
+      .all()
+      .map((r) => r.slug)
+    for (const slug of retired) expect(slugs).not.toContain(slug)
+  })
+
+  it('keeps Картофель, Лук, Бекон, Петрушка, and Дрожжи despite none being on the curated list', () => {
+    expect(labelsFor('отварной картофель')).toEqual(['Картофель'])
+    expect(labelsFor('нарезанный репчатый лук')).toEqual(['Лук'])
+    expect(labelsFor('полоски бекона')).toEqual(['Бекон'])
+    expect(labelsFor('свежая петрушка')).toEqual(['Петрушка'])
+    expect(labelsFor('сухие дрожжи')).toEqual(['Дрожжи'])
+  })
+
+  it('matches авокадо', () => {
+    expect(labelsFor('салат с авокадо')).toContain('Авокадо')
+  })
+
+  it('separates Стручковая фасоль from Фасоль', () => {
+    expect(labelsFor('стручковая фасоль')).toEqual(['Стручковая фасоль'])
+    expect(labelsFor('зелёная фасоль')).toEqual(['Стручковая фасоль'])
+    expect(labelsFor('красная фасоль')).toEqual(['Фасоль'])
+  })
+
+  it('matches лосось, including the сёмга synonym moved from the retired fish tag', () => {
+    expect(labelsFor('стейк из лосося')).toEqual(['Лосось'])
+    expect(labelsFor('малосольная сёмга')).toContain('Лосось')
+  })
+
+  it('no longer tags скумбрия or треска as fish — they were only ever aliases of the retired fish tag', () => {
+    // "горячего" incidentally stems to the same root as Второе блюдо's
+    // "горячее" alias — assert on the absence of fish tags specifically,
+    // not on an empty result.
+    expect(labelsFor('скумбрия горячего копчения')).not.toContain('Лосось')
+    expect(labelsFor('скумбрия горячего копчения')).not.toContain('Тунец')
+    expect(labelsFor('филе трески')).toEqual([])
+  })
+
+  it('matches лук-порей as distinct from лук', () => {
+    expect(labelsFor('лук-порей')).toEqual(['Лук-порей'])
+    expect(labelsFor('репчатый лук')).toEqual(['Лук'])
+  })
+
+  it('matches сосиски and сарделька as the same tag', () => {
+    expect(labelsFor('отварить сосиски')).toEqual(['Сосиски'])
+    expect(labelsFor('сарделька на гриле')).toContain('Сосиски')
   })
 })

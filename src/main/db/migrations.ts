@@ -113,6 +113,29 @@ const MIGRATIONS: Migration[] = [
 
       UPDATE tags SET disabled = 1 WHERE slug = 'black_pepper' AND source = 'builtin';
     `)
+  },
+  // v5 → v6: recreate the ingredient catalog against a curated 55-word list.
+  // Hard-deletes builtin ingredient tags outside that list — ON DELETE CASCADE
+  // removes their tag_aliases and recipe_tags rows too. This is a deliberate,
+  // one-off exception to the disable-don't-delete pattern used by v2/v4/v5;
+  // see CLAUDE.md. Картофель, Лук, Бекон, Петрушка, and Дрожжи are NOT on the
+  // curated list but are kept deliberately, per explicit user instruction.
+  // Стручковая фасоль becomes its own tag (green_beans), so its alias is
+  // removed from Фасоль; the literal below is the output of
+  // normalizeSurface('стручковая фасоль') at the time this migration was
+  // written, pinned so a future stemmer change cannot silently retarget it.
+  (db) => {
+    db.exec(`
+      DELETE FROM tags WHERE source = 'builtin' AND slug IN (
+        'garlic','carrot','tomato_paste','beet','fish',
+        'butter','oil','flour','sugar','rice','pasta','bread','dill'
+      );
+
+      DELETE FROM tag_aliases
+        WHERE source = 'builtin'
+          AND lemma = 'стручков фасол'
+          AND tag_id = (SELECT id FROM tags WHERE slug = 'beans');
+    `)
   }
 ]
 

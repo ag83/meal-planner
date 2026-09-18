@@ -3,16 +3,257 @@
 # aliases: alternative surface forms (Russian); the primary label is always included automatically.
 
 # ── Ingredients ─────────────────────────────────────────────────────────────
+# The ingredient catalog below is the curated v6 list (see migrations.ts,
+# v5 -> v6). Earlier builtin ingredient tags not on this list — Чеснок,
+# Морковь, Сливочное масло, Растительное масло, Мука, Сахар, Рис, Макароны,
+# Хлеб, Укроп, Томатная паста, Свёкла, and the generic Рыба catch-all — were
+# hard-deleted by that migration, joining Соль (migration v3) and Чёрный
+# перец (migration v5) among tags retired from earlier seed revisions.
+# Картофель, Лук, Бекон, Петрушка, and Дрожжи are NOT on the curated 55-word
+# list this catalog is otherwise built from, but were deliberately kept at
+# explicit user request (across two rounds of follow-up) — do not fold them
+# back into a future retirement pass without checking with the user first.
+# This file only ever adds tags additively, so a retirement always needs a
+# paired migration — see CLAUDE.md pitfalls.
 
-- slug: tomato
-  label: Помидор
+- slug: avocado
+  label: Авокадо
+  kind: ingredient
+  aliases: []
+
+- slug: orange
+  label: Апельсин
   kind: ingredient
   aliases:
-    - помидоры
-    - томат
-    - томаты
-    - томатик
-    - помидорчик
+    - апельсины
+    - апельсиновый
+    - апельсиновая цедра
+    - цедра апельсина
+    - апельсиновый сок
+
+- slug: peanut
+  label: Арахис
+  kind: ingredient
+  aliases:
+    - арахисовый
+    - арахисовое масло
+
+- slug: eggplant
+  label: Баклажан
+  kind: ingredient
+  aliases:
+    - баклажаны
+    - синенькие
+    - баклажанчик
+
+- slug: lamb
+  label: Баранина
+  kind: ingredient
+  aliases:
+    - баранья нога
+    - мясо баранины
+    - бараний
+
+- slug: broccoli
+  label: Брокколи
+  kind: ingredient
+  aliases:
+    - капуста брокколи
+
+- slug: swede
+  label: Брюква
+  kind: ingredient
+  aliases:
+    - брюквы
+    - брюквенный
+
+- slug: brussels_sprouts
+  label: Брюссельская капуста
+  kind: ingredient
+  aliases:
+    - кочанчики брюссельской капусты
+
+- slug: grapes
+  label: Виноград
+  kind: ingredient
+  aliases:
+    - виноградный
+    - гроздь винограда
+    - виноградинки
+
+- slug: beef
+  label: Говядина
+  kind: ingredient
+  aliases:
+    - говяжье мясо
+    - телятина
+    - говяжья вырезка
+    - вырезка говяжья
+
+- slug: green_peas
+  label: Зелёный горошек
+  kind: ingredient
+  aliases:
+    - горошек
+    - зелёного горошка
+    - консервированный горошек
+
+- slug: mushroom
+  label: Грибы
+  kind: ingredient
+  aliases:
+    - гриб
+    - грибочки
+    - грибы лесные
+    - шампиньон
+    - шампиньоны
+    - вешенки
+    - вешенка
+    - белые грибы
+    - белый гриб
+
+- slug: pear
+  label: Груша
+  kind: ingredient
+  aliases:
+    - груши
+    - грушевый
+    - грушу
+
+- slug: goose
+  label: Гусь
+  kind: ingredient
+  aliases:
+    - гуся
+    - гусиный
+    - гусятина
+
+- slug: turkey
+  label: Индейка
+  kind: ingredient
+  aliases:
+    - индюшка
+    - индюшатина
+    - филе индейки
+
+- slug: zucchini
+  label: Кабачок
+  kind: ingredient
+  aliases:
+    - кабачки
+    - цукини
+    - кабачочек
+
+- slug: squid
+  label: Кальмар
+  kind: ingredient
+  aliases:
+    - кальмары
+    - кальмаров
+    - кольца кальмара
+
+- slug: cabbage
+  label: Капуста
+  kind: ingredient
+  aliases:
+    - капустка
+    - белокочанная капуста
+    - белокочанная
+
+- slug: kefir
+  label: Кефир
+  kind: ingredient
+  aliases:
+    - кефира
+    - кефирный
+
+- slug: sausage
+  label: Колбаса
+  kind: ingredient
+  aliases:
+    - колбасы
+    - колбасный
+    - варёная колбаса
+    - копчёная колбаса
+
+- slug: crab_sticks
+  label: Крабовые палочки
+  kind: ingredient
+  aliases:
+    - крабовая палочка
+    - палочки крабовые
+
+- slug: shrimp
+  label: Креветки
+  kind: ingredient
+  aliases:
+    - креветка
+    - тигровые креветки
+    - королевские креветки
+
+- slug: corn
+  label: Кукуруза
+  kind: ingredient
+  # "кукурузный" stems to кукурузн, not кукуруз — both forms are needed.
+  aliases:
+    - кукурузный
+    - кукурузные зёрна
+    - консервированная кукуруза
+    - кукуруза консервированная
+
+- slug: dried_apricot
+  label: Курага
+  kind: ingredient
+  aliases:
+    - кураги
+    - курагу
+
+- slug: chicken
+  label: Курица
+  kind: ingredient
+  aliases:
+    - куриное мясо
+    - курятина
+    - куриная грудка
+    - грудка куриная
+    - куриное филе
+    - филе курицы
+    - бедро куриное
+    - куриные бёдра
+
+- slug: lemon
+  label: Лимон
+  kind: ingredient
+  aliases:
+    - лимоны
+    - лимончик
+    - лимонный сок
+    - сок лимона
+
+- slug: salmon
+  label: Лосось
+  kind: ingredient
+  aliases:
+    - лосося
+    - сёмга
+    - семга
+
+- slug: honey
+  label: Мёд
+  kind: ingredient
+  aliases:
+    - медовый
+    - медовая
+    - жидкий мёд
+    - натуральный мёд
+
+- slug: milk
+  label: Молоко
+  kind: ingredient
+  aliases:
+    - молочко
+    - цельное молоко
+    - обезжиренное молоко
 
 - slug: cucumber
   label: Огурец
@@ -22,6 +263,38 @@
     - огурчик
     - огурчики
 
+- slug: chicken_leg
+  label: Окорочка
+  kind: ingredient
+  aliases:
+    - окорочок
+    - куриные окорочка
+    - окорочков
+
+- slug: olives
+  label: Оливки
+  kind: ingredient
+  aliases:
+    - оливка
+    - оливок
+    - маслины
+
+- slug: nuts
+  label: Орехи
+  kind: ingredient
+  aliases:
+    - орех
+    - орешки
+    - грецкие орехи
+
+- slug: napa_cabbage
+  label: Пекинская капуста
+  kind: ingredient
+  aliases:
+    - китайская капуста
+
+# Not on the curated 55-word list — kept deliberately at explicit user
+# request. See migrations.ts v5 -> v6 and the file header comment above.
 - slug: potato
   label: Картофель
   kind: ingredient
@@ -40,29 +313,31 @@
     - репчатый лук
     - лук репчатый
 
-- slug: garlic
-  label: Чеснок
+- slug: bacon
+  label: Бекон
   kind: ingredient
   aliases:
-    - чесночок
-    - чесночная головка
-    - зубчик чеснока
+    - копчёный бекон
+    - бекон копчёный
+    - полоски бекона
 
-- slug: carrot
-  label: Морковь
+- slug: parsley
+  label: Петрушка
   kind: ingredient
   aliases:
-    - морковка
-    - морковочка
-    - морковь свежая
+    - петрушечка
+    - зелень петрушки
+    - свежая петрушка
 
-- slug: cabbage
-  label: Капуста
+- slug: yeast
+  label: Дрожжи
   kind: ingredient
   aliases:
-    - капустка
-    - белокочанная капуста
-    - белокочанная
+    - дрожжевой
+    - сухие дрожжи
+    - живые дрожжи
+    - свежие дрожжи
+    - прессованные дрожжи
 
 - slug: bell_pepper
   label: Болгарский перец
@@ -82,84 +357,20 @@
     - печень говяжья
     - говяжья печень
 
-- slug: tomato_paste
-  label: Томатная паста
+- slug: tomato
+  label: Помидор
   kind: ingredient
   aliases:
-    - паста томатная
-    - томат-паста
+    - помидоры
+    - томат
+    - томаты
+    - томатик
+    - помидорчик
 
-# Чёрный перец deliberately omitted — it appears in nearly every recipe, so it
-# carries no filtering value. Migration v5 disables it in vaults that have it.
-# Consequence: bare "перец" now matches nothing; Болгарский перец still requires
-# сладкий/болгарский.
-
-- slug: eggplant
-  label: Баклажан
+- slug: leek
+  label: Лук-порей
   kind: ingredient
-  aliases:
-    - баклажаны
-    - синенькие
-    - баклажанчик
-
-- slug: zucchini
-  label: Кабачок
-  kind: ingredient
-  aliases:
-    - кабачки
-    - цукини
-    - кабачочек
-
-- slug: beet
-  label: Свёкла
-  kind: ingredient
-  aliases:
-    - свекла
-    - свёклочка
-    - свекольник
-
-- slug: spinach
-  label: Шпинат
-  kind: ingredient
-  aliases:
-    - шпинатные листья
-    - листья шпината
-
-- slug: mushroom
-  label: Грибы
-  kind: ingredient
-  aliases:
-    - гриб
-    - грибочки
-    - грибы лесные
-    - шампиньон
-    - шампиньоны
-    - вешенки
-    - вешенка
-    - белые грибы
-    - белый гриб
-
-- slug: chicken
-  label: Курица
-  kind: ingredient
-  aliases:
-    - куриное мясо
-    - курятина
-    - куриная грудка
-    - грудка куриная
-    - куриное филе
-    - филе курицы
-    - бедро куриное
-    - куриные бёдра
-
-- slug: beef
-  label: Говядина
-  kind: ingredient
-  aliases:
-    - говяжье мясо
-    - телятина
-    - говяжья вырезка
-    - вырезка говяжья
+  aliases: []
 
 - slug: pork
   label: Свинина
@@ -171,72 +382,13 @@
     - свиная корейка
     - окорок свиной
 
-- slug: minced_meat
-  label: Фарш
+- slug: celery
+  label: Сельдерей
   kind: ingredient
   aliases:
-    - мясной фарш
-    - фарш куриный
-    - фарш говяжий
-    - фарш свиной
-    - фарш смешанный
-
-- slug: fish
-  label: Рыба
-  kind: ingredient
-  aliases:
-    - рыбка
-    - рыбное филе
-    - филе рыбы
-    - горбуша
-    - сёмга
-    - семга
-    - лосось
-    - скумбрия
-    - треска
-    - минтай
-    - судак
-    - карп
-
-- slug: shrimp
-  label: Креветки
-  kind: ingredient
-  aliases:
-    - креветка
-    - тигровые креветки
-    - королевские креветки
-
-- slug: egg
-  label: Яйцо
-  kind: ingredient
-  aliases:
-    - яйца
-    - куриное яйцо
-    - яйца куриные
-    - яичко
-
-- slug: cheese
-  label: Сыр
-  kind: ingredient
-  aliases:
-    - сырок
-    - твёрдый сыр
-    - твердый сыр
-    - плавленый сыр
-    - моцарелла
-    - пармезан
-    - фета
-    - брынза
-    - голландский сыр
-    - российский сыр
-
-- slug: milk
-  label: Молоко
-  kind: ingredient
-  aliases:
-    - молочко
-    - цельное молоко
-    - обезжиренное молоко
+    - сельдерея
+    - стебель сельдерея
+    - корень сельдерея
 
 - slug: cream
   label: Сливки
@@ -255,130 +407,43 @@
     - сметана 20%
     - жирная сметана
 
-- slug: butter
-  label: Сливочное масло
-  kind: ingredient
-  # Deliberately no bare "масло" — it would swallow оливковое/растительное масло
-  # whenever OCR drops the adjective.
-  aliases:
-    - масло сливочное
-    - маслице
-
-- slug: oil
-  label: Растительное масло
+- slug: pickled_cucumber
+  label: Солёный огурец
   kind: ingredient
   aliases:
-    - масло растительное
-    - масло подсолнечное
-    - подсолнечное масло
-    - масло оливковое
-    - оливковое масло
+    - солёные огурцы
+    - маринованный огурец
 
-- slug: flour
-  label: Мука
+- slug: hot_dogs
+  label: Сосиски
   kind: ingredient
   aliases:
-    - мука пшеничная
-    - пшеничная мука
-    - мука высшего сорта
+    - сосиска
+    - сосисок
+    - сарделька
+    - сардельки
 
-- slug: sugar
-  label: Сахар
+- slug: green_beans
+  label: Стручковая фасоль
   kind: ingredient
   aliases:
-    - сахарный песок
-    - сахарок
-    - сахар белый
+    - стручковой фасоли
+    - зелёная фасоль
 
-# Соль deliberately omitted — it appears in nearly every recipe, so it carries no
-# filtering value. Migration v3 disables it in vaults that already have it.
-
-- slug: rice
-  label: Рис
+- slug: cheese
+  label: Сыр
   kind: ingredient
   aliases:
-    - рисик
-    - длиннозёрный рис
-    - круглый рис
-    - рис басмати
-    - басмати
-
-- slug: pasta
-  label: Макароны
-  kind: ingredient
-  aliases:
-    - макаронные изделия
-    - спагетти
-    - паста
-    - пенне
-    - фарфалле
-    - тальятелле
-    - лингвине
-    - фетучини
-
-- slug: bread
-  label: Хлеб
-  kind: ingredient
-  aliases:
-    - буханка
-    - батон
-    - белый хлеб
-    - чёрный хлеб
-    - ржаной хлеб
-    - хлебушек
-
-- slug: apple
-  label: Яблоко
-  kind: ingredient
-  aliases:
-    - яблоки
-    - яблочко
-    - яблоко зелёное
-    - яблоко красное
-
-- slug: lemon
-  label: Лимон
-  kind: ingredient
-  aliases:
-    - лимоны
-    - лимончик
-    - лимонный сок
-    - сок лимона
-
-- slug: dill
-  label: Укроп
-  kind: ingredient
-  aliases:
-    - укропчик
-    - зелень укропа
-    - свежий укроп
-
-- slug: parsley
-  label: Петрушка
-  kind: ingredient
-  aliases:
-    - петрушечка
-    - зелень петрушки
-    - свежая петрушка
-
-- slug: honey
-  label: Мёд
-  kind: ingredient
-  aliases:
-    - медовый
-    - медовая
-    - жидкий мёд
-    - натуральный мёд
-
-- slug: orange
-  label: Апельсин
-  kind: ingredient
-  aliases:
-    - апельсины
-    - апельсиновый
-    - апельсиновая цедра
-    - цедра апельсина
-    - апельсиновый сок
+    - сырок
+    - твёрдый сыр
+    - твердый сыр
+    - плавленый сыр
+    - моцарелла
+    - пармезан
+    - фета
+    - брынза
+    - голландский сыр
+    - российский сыр
 
 - slug: cottage_cheese
   label: Творог
@@ -389,25 +454,22 @@
     - творожок
     - зернёный творог
 
-- slug: yeast
-  label: Дрожжи
+- slug: tuna
+  label: Тунец
   kind: ingredient
   aliases:
-    - дрожжевой
-    - сухие дрожжи
-    - живые дрожжи
-    - свежие дрожжи
-    - прессованные дрожжи
+    - тунца
+    - консервированный тунец
 
-- slug: corn
-  label: Кукуруза
+- slug: minced_meat
+  label: Фарш
   kind: ingredient
-  # "кукурузный" stems to кукурузн, not кукуруз — both forms are needed.
   aliases:
-    - кукурузный
-    - кукурузные зёрна
-    - консервированная кукуруза
-    - кукуруза консервированная
+    - мясной фарш
+    - фарш куриный
+    - фарш говяжий
+    - фарш свиной
+    - фарш смешанный
 
 - slug: beans
   label: Фасоль
@@ -417,15 +479,45 @@
     - фасолевый
     - красная фасоль
     - белая фасоль
-    - стручковая фасоль
 
-- slug: bacon
-  label: Бекон
+- slug: prunes
+  label: Чернослив
   kind: ingredient
   aliases:
-    - копчёный бекон
-    - бекон копчёный
-    - полоски бекона
+    - чернослива
+    - сушёная слива
+
+- slug: lentils
+  label: Чечевица
+  kind: ingredient
+  aliases:
+    - чечевицы
+    - красная чечевица
+
+- slug: spinach
+  label: Шпинат
+  kind: ingredient
+  aliases:
+    - шпинатные листья
+    - листья шпината
+
+- slug: apple
+  label: Яблоко
+  kind: ingredient
+  aliases:
+    - яблоки
+    - яблочко
+    - яблоко зелёное
+    - яблоко красное
+
+- slug: egg
+  label: Яйцо
+  kind: ingredient
+  aliases:
+    - яйца
+    - куриное яйцо
+    - яйца куриные
+    - яичко
 
 # ── Dish types ───────────────────────────────────────────────────────────────
 
