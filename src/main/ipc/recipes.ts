@@ -136,7 +136,7 @@ export const registerRecipeHandlers = (): void => {
 
   ipcMain.handle('recipes:reOcr', async (_event, id: unknown, lang: unknown) => {
     if (typeof id !== 'string') throw new Error('Invalid id')
-    const ocrLang = typeof lang === 'string' ? lang : 'rus+eng'
+    const requestedLang = typeof lang === 'string' && lang.trim() ? lang : undefined
     const vault = vaultManager.getCurrent()
     if (!vault) throw new Error('No vault open')
     const db = getDb()
@@ -146,7 +146,7 @@ export const registerRecipeHandlers = (): void => {
     if (!recipe) throw new Error('Recipe not found')
 
     const imagePath = path.join(vault.path, 'pictures', `${id}.${recipe.ext}`)
-    const { text, confidence } = await runOcr(imagePath)
+    const { text, confidence, lang: ocrLang } = await runOcr(imagePath, requestedLang)
     const matches = extractTags(db, text)
 
     db.transaction(() => {

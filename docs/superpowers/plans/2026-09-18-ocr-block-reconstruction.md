@@ -608,7 +608,14 @@ Run: `npm run typecheck && npm run lint && npx vitest run`
 Expected: all PASS.
 
 Then confirm no stale literal remains: `grep -rn "rus+eng" src/`
-Expected: no matches.
+Expected: no matches, other than the explanatory comment in `worker.ts`, the negative assertion in `worker-lang.test.ts`, and the still-selectable `<option value="rus+eng">` entries in `detail.tsx` and `settings.tsx`.
+
+**Deviation found and fixed here, not anticipated by the plan:** this grep surfaces three renderer/settings files the plan's Task 3 file list omitted, all defaulting to `'rus+eng'`:
+
+- `src/renderer/src/routes/detail.tsx:47` — `useState('rus+eng')` for the "Re-run OCR" dropdown. This one is not decorative: it is sent as an *explicit* `lang` argument on every re-run, silently overriding `runOcr`'s new `DEFAULT_LANG` default for the one UI path that actually exercises it. Change to `useState('rus')`.
+- `src/main/ipc/settings.ts:10` and `src/renderer/src/stores/useSettingsStore.ts:12` — the global "OCR Language" setting's default. Traced its only consumer (`settings:get`/`settings:update`); confirmed `src/main/ingest/pipeline.ts` never calls `settings:get` at all, so this default was already decorative before this plan and remains so — but leaving it stated as `'rus+eng'` would misrepresent the actual default to anyone reading the Settings screen. Change both to `'rus'`.
+
+Do not wire the Settings `ocrLang` value into `pipeline.ts` as part of this task — that is a real feature (making ingest honour a user-configured language), not a truthfulness fix, and is out of scope here.
 
 - [ ] **Step 8: Commit**
 

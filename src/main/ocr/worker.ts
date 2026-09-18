@@ -10,11 +10,16 @@ import { preprocessImage } from './preprocess'
 import type { TessBlock } from './blocks'
 
 const POOL_SIZE = Math.max(1, Math.min(os.cpus().length - 1, 4))
-const LANG = 'rus+eng'
+
+// Russian-only: 'rus+eng' keeps Latin glyphs in the candidate set for every
+// character, which produced 500 I for 500 г, TaKже for также, A0 for до.
+// The Russian-trained model also beats the generic script/Cyrillic one.
+export const DEFAULT_LANG = 'rus'
 
 interface PoolEntry {
   worker: Worker
   busy: boolean
+  lang: string
 }
 
 let pool: PoolEntry[] = []
@@ -27,10 +32,10 @@ const buildPool = async (): Promise<void> => {
   pool = await Promise.all(
     Array.from({ length: POOL_SIZE }, async () => {
       const worker = await createWorker({ cachePath, cacheMethod: 'readWrite' })
-      await worker.loadLanguage(LANG)
-      await worker.initialize(LANG)
+      await worker.loadLanguage(DEFAULT_LANG)
+      await worker.initialize(DEFAULT_LANG)
       await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO })
-      return { worker, busy: false }
+      return { worker, busy: false, lang: DEFAULT_LANG }
     })
   )
 }
@@ -68,16 +73,24 @@ export interface OcrResult {
   lang: string
 }
 
-export const runOcr = async (imagePath: string): Promise<OcrResult> => {
+export const runOcr = async (imagePath: string, lang = DEFAULT_LANG): Promise<OcrResult> => {
   await ensurePool()
   const entry = await acquireWorker()
   try {
+    // Non-default languages are rare, so re-initialising on demand beats keying
+    // a separate pool per language.
+    if (entry.lang !== lang) {
+      await entry.worker.loadLanguage(lang)
+      await entry.worker.initialize(lang)
+      entry.lang = lang
+    }
+
     const buffer = await preprocessImage(imagePath)
     const {
       data: { blocks, confidence }
     } = await entry.worker.recognize(buffer)
     const text = joinLines(blocksToLines((blocks ?? []) as TessBlock[]))
-    return { text, confidence, lang: LANG }
+    return { text, confidence, lang }
   } finally {
     entry.busy = false
   }
