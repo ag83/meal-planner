@@ -4,10 +4,10 @@ import path from 'path'
 import { app } from 'electron'
 import { createWorker, PSM } from 'tesseract.js'
 import type { Worker } from 'tesseract.js'
-import { flattenWords, reconstructLines } from './layout'
+import { blocksToLines } from './blocks'
 import { joinLines } from './postprocess'
 import { preprocessImage } from './preprocess'
-import type { TessBlock } from './layout'
+import type { TessBlock } from './blocks'
 
 const POOL_SIZE = Math.max(1, Math.min(os.cpus().length - 1, 4))
 const LANG = 'rus+eng'
@@ -76,8 +76,7 @@ export const runOcr = async (imagePath: string): Promise<OcrResult> => {
     const {
       data: { blocks, confidence }
     } = await entry.worker.recognize(buffer)
-    const words = flattenWords((blocks ?? []) as TessBlock[])
-    const text = joinLines(reconstructLines(words))
+    const text = joinLines(blocksToLines((blocks ?? []) as TessBlock[]))
     return { text, confidence, lang: LANG }
   } finally {
     entry.busy = false
