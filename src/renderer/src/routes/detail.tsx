@@ -44,7 +44,7 @@ const Detail = (): React.JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
-  const [reOcrLang, setReOcrLang] = useState('rus+eng')
+  const [reOcrLang, setReOcrLang] = useState('rus')
   const [reOcring, setReOcring] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)

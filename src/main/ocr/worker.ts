@@ -2,33 +2,24 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { app } from 'electron'
-import sharp from 'sharp'
 import { createWorker, PSM } from 'tesseract.js'
 import type { Worker } from 'tesseract.js'
-import { flattenWords, reconstructLines } from './layout'
+import { blocksToLines } from './blocks'
 import { joinLines } from './postprocess'
-import type { TessBlock } from './layout'
+import { preprocessImage } from './preprocess'
+import type { TessBlock } from './blocks'
 
 const POOL_SIZE = Math.max(1, Math.min(os.cpus().length - 1, 4))
-const LANG = 'rus+eng'
-const UPSCALE = 2
 
-// Screenshots run 8-12px x-height; Tesseract wants >=20px. Upscaling also recovers
-// stylised headings that are otherwise dropped entirely.
-const preprocess = async (imagePath: string): Promise<Buffer> => {
-  const image = sharp(imagePath)
-  const { width } = await image.metadata()
-  if (!width) return image.greyscale().normalise().toBuffer()
-  return image
-    .resize({ width: width * UPSCALE, kernel: 'lanczos3' })
-    .greyscale()
-    .normalise()
-    .toBuffer()
-}
+// Russian-only: 'rus+eng' keeps Latin glyphs in the candidate set for every
+// character, which produced 500 I for 500 г, TaKже for также, A0 for до.
+// The Russian-trained model also beats the generic script/Cyrillic one.
+export const DEFAULT_LANG = 'rus'
 
 interface PoolEntry {
   worker: Worker
   busy: boolean
+  lang: string
 }
 
 let pool: PoolEntry[] = []
@@ -41,10 +32,10 @@ const buildPool = async (): Promise<void> => {
   pool = await Promise.all(
     Array.from({ length: POOL_SIZE }, async () => {
       const worker = await createWorker({ cachePath, cacheMethod: 'readWrite' })
-      await worker.loadLanguage(LANG)
-      await worker.initialize(LANG)
+      await worker.loadLanguage(DEFAULT_LANG)
+      await worker.initialize(DEFAULT_LANG)
       await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO })
-      return { worker, busy: false }
+      return { worker, busy: false, lang: DEFAULT_LANG }
     })
   )
 }
@@ -82,17 +73,24 @@ export interface OcrResult {
   lang: string
 }
 
-export const runOcr = async (imagePath: string): Promise<OcrResult> => {
+export const runOcr = async (imagePath: string, lang = DEFAULT_LANG): Promise<OcrResult> => {
   await ensurePool()
   const entry = await acquireWorker()
   try {
-    const buffer = await preprocess(imagePath)
+    // Non-default languages are rare, so re-initialising on demand beats keying
+    // a separate pool per language.
+    if (entry.lang !== lang) {
+      await entry.worker.loadLanguage(lang)
+      await entry.worker.initialize(lang)
+      entry.lang = lang
+    }
+
+    const buffer = await preprocessImage(imagePath)
     const {
       data: { blocks, confidence }
     } = await entry.worker.recognize(buffer)
-    const words = flattenWords((blocks ?? []) as TessBlock[])
-    const text = joinLines(reconstructLines(words))
-    return { text, confidence, lang: LANG }
+    const text = joinLines(blocksToLines((blocks ?? []) as TessBlock[]))
+    return { text, confidence, lang }
   } finally {
     entry.busy = false
   }

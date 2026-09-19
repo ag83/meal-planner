@@ -113,15 +113,26 @@ const IMAGE = path.join(
 )
 
 describe('preprocessImage', () => {
-  it('upscales by UPSCALE and converts to single-channel greyscale', async () => {
+  it('upscales by UPSCALE', async () => {
     const original = await sharp(IMAGE).metadata()
     const out = await sharp(await preprocessImage(IMAGE)).metadata()
 
     expect(out.width).toBe(original.width! * UPSCALE)
-    expect(out.channels).toBe(1)
+  })
+
+  it('desaturates to greyscale', async () => {
+    // sharp's .greyscale() equalises R/G/B rather than re-encoding to a
+    // single-channel PNG, so the real invariant is equal channel means, not
+    // metadata().channels === 1.
+    const stats = await sharp(await preprocessImage(IMAGE)).stats()
+    const [r, g, b] = stats.channels.map((c) => c.mean)
+    expect(r).toBeCloseTo(g, 1)
+    expect(g).toBeCloseTo(b, 1)
   })
 })
 ```
+
+**Deviation note:** the original plan asserted `metadata().channels === 1`. Verified against the actual sharp output: `.greyscale()` desaturates (R=G=B) but keeps a 3-channel sRGB PNG encoding in the installed sharp version — this is existing, unchanged behavior, not a regression. The test above asserts the real invariant instead.
 
 This test needs the fixture image, which Task 4 formally introduces. Add it now so this task is self-contained:
 
@@ -597,7 +608,14 @@ Run: `npm run typecheck && npm run lint && npx vitest run`
 Expected: all PASS.
 
 Then confirm no stale literal remains: `grep -rn "rus+eng" src/`
-Expected: no matches.
+Expected: no matches, other than the explanatory comment in `worker.ts`, the negative assertion in `worker-lang.test.ts`, and the still-selectable `<option value="rus+eng">` entries in `detail.tsx` and `settings.tsx`.
+
+**Deviation found and fixed here, not anticipated by the plan:** this grep surfaces three renderer/settings files the plan's Task 3 file list omitted, all defaulting to `'rus+eng'`:
+
+- `src/renderer/src/routes/detail.tsx:47` — `useState('rus+eng')` for the "Re-run OCR" dropdown. This one is not decorative: it is sent as an *explicit* `lang` argument on every re-run, silently overriding `runOcr`'s new `DEFAULT_LANG` default for the one UI path that actually exercises it. Change to `useState('rus')`.
+- `src/main/ipc/settings.ts:10` and `src/renderer/src/stores/useSettingsStore.ts:12` — the global "OCR Language" setting's default. Traced its only consumer (`settings:get`/`settings:update`); confirmed `src/main/ingest/pipeline.ts` never calls `settings:get` at all, so this default was already decorative before this plan and remains so — but leaving it stated as `'rus+eng'` would misrepresent the actual default to anyone reading the Settings screen. Change both to `'rus'`.
+
+Do not wire the Settings `ocrLang` value into `pipeline.ts` as part of this task — that is a real feature (making ingest honour a user-configured language), not a truthfulness fix, and is out of scope here.
 
 - [ ] **Step 8: Commit**
 
@@ -725,6 +743,8 @@ Expected: PASS, logging `recorded beef-three-column: 6 blocks` and `recorded por
 
 Confirm they exist and are non-trivial: `ls -la src/main/ocr/__tests__/fixtures/*.blocks.json`
 
+**Deviation found and fixed here, not anticipated by the plan:** the recorder's `createWorker()` call has no `cachePath` (unlike `worker.ts`'s real pool, which sets one under `app.getPath('userData')`), so tesseract.js downloads `rus.traineddata` into the process's cwd — the repo root. Add `*.traineddata` to `.gitignore` and delete the stray file; otherwise it reappears as an untracked file every time `npm run ocr:record` runs.
+
 - [ ] **Step 4: Write the integration test**
 
 Every expected string below was observed from a real run of this exact pipeline (`preprocessImage` → `PSM.AUTO` → `rus` → `blocksToLines` → `joinLines`).
@@ -836,6 +856,8 @@ Three entries in `CLAUDE.md` describe the code this plan deletes. Leaving them w
 **Files:**
 - Modify: `CLAUDE.md:120`, `CLAUDE.md:164`, plus a new pitfall and a language note.
 
+**Deviation found and fixed here, not anticipated by the plan:** `CLAUDE.md:9` ("Russian-first: OCR defaults to `rus+eng`") and `CLAUDE.md:17` ("tesseract.js for OCR (worker pool in main, default `rus+eng`)") also state the old default and are not in the plan's file list. Both changed to `rus` (line 9 additionally notes "Cyrillic only — see pitfalls") so Step 5's `grep -rn "rus+eng" CLAUDE.md src/` check is actually clean rather than incidentally passing while stale text survives elsewhere in the file.
+
 - [ ] **Step 1: Fix the data-flow description**
 
 `CLAUDE.md:120` currently reads `… OCR (2× upscale → PSM 3 → `ocr/layout.ts` reorders columns → `ocr/postprocess.ts` de-hyphenates) …`. Replace that parenthetical with:
@@ -900,3 +922,5 @@ Expected: all PASS. `develop` requires all four green on every commit.
 Run `npm run dev`, add the говядина screenshot as a new recipe, and confirm in the detail view's OCR TEXT panel that the three body columns read as three separate coherent paragraphs rather than interleaved lines, and that `зубчика`, `до готовности` and `терке` appear without Latin substitutions.
 
 This step is not optional — `CLAUDE.md` records that OCR changes have previously passed their tests while being wrong in composition.
+
+**Deviation actually taken:** no project skill exists for driving this Electron app, and standing up a Playwright `_electron` driver was judged disproportionate given the native-module rebuild churn already hit twice in this session (`better-sqlite3` ABI mismatches). Instead, ran the real, unmocked production `runOcr()` from `worker.ts` (only `electron`'s `app.getPath` stubbed, matching `worker-lang.test.ts`'s existing pattern) directly against the committed `beef-three-column.png` — exercising the actual tesseract worker pool, `preprocessImage`, `blocksToLines`, and `joinLines`, not the recorded/stripped fixtures `reconstruction.test.ts` uses. Result: `lang: 'rus'`, three coherent paragraphs, `зубчика`/`до готовности`/`терке` all correct — matching the fixture-based tests exactly. This validates the same text `detail.tsx` renders verbatim in its `<pre>`, and additionally exercises the Task 3 pool re-initialisation path that no other test calls. It does not exercise the Electron IPC/renderer wiring itself, which this plan did not modify.

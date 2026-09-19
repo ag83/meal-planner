@@ -75,11 +75,12 @@ export const ingestFile = async (
   onProgress({ filePath: srcPath, status: 'ocr' })
   let ocrText = ''
   let ocrConf = 0
-  const ocrLang = 'rus+eng'
+  let ocrLang = ''
   try {
     const result = await runOcr(destPath)
     ocrText = result.text
     ocrConf = result.confidence
+    ocrLang = result.lang
   } catch (err) {
     // OCR failure is non-fatal — recipe is still saved without text
     console.warn(`[ingest] OCR failed for ${id}:`, err)

@@ -7,7 +7,7 @@ import type { Settings, AppTheme } from '../../shared/types'
 
 const DEFAULTS: Settings = {
   theme: 'system',
-  ocrLang: 'rus+eng'
+  ocrLang: 'rus'
 }
 
 const configPath = (): string => {
