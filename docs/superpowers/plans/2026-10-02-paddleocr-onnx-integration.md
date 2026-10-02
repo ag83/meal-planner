@@ -39,11 +39,12 @@ This task produces binary artifacts, not application code. It has no TDD red/gre
 
 - [ ] **Step 1: Write the export script**
 
-The three source models are the PaddleX "inference model" directories already cached locally at `C:\Users\AG\.paddlex\official_models\<name>\` (or wherever `PaddleOCR(lang="ru")` / `PPStructureV3(lang="ru", use_region_detection=False)` downloaded them during the investigation that produced the spec — if they are not present, running those two constructors once downloads them). `paddle2onnx` 2.1.0 failed to import on Windows during that investigation (`DLL load failed... paddle2onnx_cpp2py_export`); run this script under WSL/Linux/CI if it fails on Windows again — it does not need to run on the same machine as the rest of this plan, since its output is three portable files.
+The three source models are the PaddleX "inference model" directories already cached locally at `C:\Users\AG\.paddlex\official_models\<name>\` (or wherever `PaddleOCR(lang="ru")` / `PPStructureV3(lang="ru", use_region_detection=False)` downloaded them during the investigation that produced the spec — if they are not present, running those two constructors once downloads them). `paddle2onnx` 2.1.0 (latest) failed to import on Windows during that investigation (`DLL load failed... paddle2onnx_cpp2py_export`) — confirmed again during plan execution. `paddle2onnx` **1.3.1** does import successfully on Windows and provides the same `--model_dir`/`--model_filename`/`--params_filename`/`--save_file` CLI flags, but ships no `__main__.py`, so it must be invoked as the `paddle2onnx` console-script executable directly, not via `python -m paddle2onnx`. Install it with `pip install paddle2onnx==1.3.1`. If 1.3.1 ever stops working too, fall back to running this script under WSL/Linux/CI instead — it does not need to run on the same machine as the rest of this plan, since its output is three portable files.
 
 ```python
 # scripts/export-onnx-models.py
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -51,6 +52,13 @@ from pathlib import Path
 MODELS_ROOT = Path.home() / ".paddlex" / "official_models"
 OUT_DIR = Path(__file__).resolve().parent.parent / "resources" / "models"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+PADDLE2ONNX_EXE = shutil.which("paddle2onnx")
+if PADDLE2ONNX_EXE is None:
+    print("ERROR: paddle2onnx console script not found on PATH. "
+          "pip install paddle2onnx==1.3.1 into the active environment first.",
+          file=sys.stderr)
+    sys.exit(1)
 
 EXPORTS = [
     ("PP-OCRv5_server_det", "det.onnx"),
@@ -68,7 +76,7 @@ for model_name, out_name in EXPORTS:
     out_path = OUT_DIR / out_name
     subprocess.run(
         [
-            sys.executable, "-m", "paddle2onnx",
+            PADDLE2ONNX_EXE,
             "--model_dir", str(model_dir),
             "--model_filename", "inference.json",
             "--params_filename", "inference.pdiparams",
