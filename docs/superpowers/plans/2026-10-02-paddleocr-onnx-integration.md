@@ -280,7 +280,7 @@ Text detection's DB postprocess needs to turn a thresholded binary mask into a l
 **Interfaces:**
 - Produces: `interface Component { minX: number; minY: number; maxX: number; maxY: number; pixelCount: number }` and `findConnectedComponents(mask: Uint8Array, width: number, height: number): Component[]` — consumed by Task 3.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // src/main/ocr/paddle/__tests__/connectedComponents.test.ts
@@ -331,12 +331,12 @@ describe('findConnectedComponents', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/connectedComponents.test.ts`
 Expected: FAIL — module doesn't exist.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Iterative BFS flood fill (not recursive — a full-page mask can have components spanning hundreds of thousands of pixels, and a recursive implementation would overflow the call stack).
 
@@ -403,12 +403,12 @@ export const findConnectedComponents = (mask: Uint8Array, width: number, height:
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/connectedComponents.test.ts`
 Expected: PASS (4 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/ocr/paddle/connectedComponents.ts src/main/ocr/paddle/__tests__/connectedComponents.test.ts
