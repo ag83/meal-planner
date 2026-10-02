@@ -173,13 +173,13 @@ git commit -m "build(ocr): export PaddleOCR detector, eslav recognizer, and layo
 **Interfaces:**
 - Produces: `rgbaToChwFloat32(pixels: Buffer, width: number, height: number, channels: 3 | 4, mean: readonly [number, number, number], std: readonly [number, number, number], swapRB: boolean): Float32Array` — consumed by Tasks 3, 5, 6.
 
-- [ ] **Step 1: Install the dependency**
+- [x] **Step 1: Install the dependency**
 
 ```bash
 npm install onnxruntime-node
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `rgbaToChwFloat32` must: read interleaved HWC pixel data, normalize each channel as `(value/255 - mean[c]) / std[c]`, write it out in planar CHW order, and swap the R/B channel positions when `swapRB` is true (PaddleOCR's `DecodeImage` step reads `img_mode: "BGR"`; `sharp`'s `.raw()` output is RGB, so this flag makes channel 0 of the output tensor be what the model was trained on as "B").
 
@@ -220,12 +220,12 @@ describe('rgbaToChwFloat32', () => {
 })
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/tensor.test.ts`
 Expected: FAIL — `../tensor` has no exported member `rgbaToChwFloat32` (module doesn't exist yet).
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 ```typescript
 // src/main/ocr/paddle/tensor.ts
@@ -255,12 +255,12 @@ export const rgbaToChwFloat32 = (
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/tensor.test.ts`
 Expected: PASS (3 tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add package.json package-lock.json src/main/ocr/paddle/tensor.ts src/main/ocr/paddle/__tests__/tensor.test.ts
