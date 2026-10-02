@@ -657,7 +657,7 @@ Per Task 0: `CTCLabelDecode` prepends a `blank` token at class index 0, so class
 **Interfaces:**
 - Produces: `ctcGreedyDecode(logits: Float32Array, timeSteps: number, numClasses: number, dict: readonly string[]): { text: string; confidence: number }` — consumed by Task 5.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Greedy CTC decode: at each timestep, take the argmax class; collapse consecutive repeats of the *same* class into one; drop every occurrence of class 0 (blank) — including a blank between two instances of the same real character, which is exactly what allows CTC to represent a doubled letter.
 
@@ -707,8 +707,8 @@ describe('ctcGreedyDecode', () => {
     // class 1 repeated at t=1 is dropped from the average (it's a collapsed repeat)
     const numClasses = 4
     const logits = new Float32Array(2 * numClasses)
-    logits.set([10, 0, 0, 0], 0)
-    logits.set([10, 0, 0, 0], numClasses)
+    logits.set([0, 10, 0, 0], 0)
+    logits.set([0, 10, 0, 0], numClasses)
     const result = ctcGreedyDecode(logits, 2, numClasses, dict)
     expect(result.text).toBe('a')
     expect(result.confidence).toBeGreaterThan(0.9)
@@ -716,12 +716,12 @@ describe('ctcGreedyDecode', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/ctcDecode.test.ts`
 Expected: FAIL — module doesn't exist.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/main/ocr/paddle/ctcDecode.ts
@@ -775,12 +775,12 @@ export const ctcGreedyDecode = (
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/ctcDecode.test.ts`
 Expected: PASS (5 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/ocr/paddle/ctcDecode.ts src/main/ocr/paddle/__tests__/ctcDecode.test.ts
