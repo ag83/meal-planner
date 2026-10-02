@@ -969,7 +969,7 @@ Per the spec's Investigation, `PP-DocBlockLayout` is **not** used by this plan �
 **Interfaces:**
 - Produces: `interface LayoutRegion { x0: number; y0: number; x1: number; y1: number; label: 'text' | 'title' | 'image' }`, `decodeLayout(rows: Float32Array, numRows: number, threshold?: number): LayoutRegion[]`, `runLayout(session: InferenceSession, imagePath: string): Promise<LayoutRegion[]>` — `LayoutRegion[]` is consumed by Task 7 (reading order) and Task 8 (assembly).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `LAYOUT_LABELS` is the `label_list` recorded verbatim from `PP-DocLayout_plus-L/config.json` during Task 0's investigation; `rows` is the flattened `fetch_name_0` output — row `i`'s six values live at `rows[i*6 .. i*6+5]`.
 
@@ -1033,12 +1033,12 @@ describe('decodeLayout', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/layout.test.ts`
 Expected: FAIL — module doesn't exist.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/main/ocr/paddle/layout.ts
@@ -1132,12 +1132,12 @@ export const runLayout = async (session: InferenceSession, imagePath: string): P
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/layout.test.ts`
 Expected: PASS (6 tests)
 
-- [ ] **Step 5: Verify `runLayout` against the real model**
+- [x] **Step 5: Verify `runLayout` against the real model**
 
 ```typescript
 // scratch check, not committed — run with: npx tsx <this file>
@@ -1155,7 +1155,7 @@ main()
 
 Expected: six regions matching the ones already recorded in the spec's Investigation section: title ~(78,18)-(391,130) label `text` (not `title` — see this task's note above), ingredients ~(66,166)-(393,434) label `text`, photo ~(445,26)-(1280,654) label `image`, step 1 ~(49,472)-(423,951) label `text`, and two step-2 regions ~(440,679)-(816,950) and ~(832,683)-(1203,950), both label `text`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/main/ocr/paddle/layout.ts src/main/ocr/paddle/__tests__/layout.test.ts
