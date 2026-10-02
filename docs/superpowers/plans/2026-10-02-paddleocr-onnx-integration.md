@@ -431,7 +431,7 @@ This task separates the **pure decode logic** (`decodeDetection`, no I/O, fully 
 - Consumes: `rgbaToChwFloat32` (Task 1), `findConnectedComponents` (Task 2).
 - Produces: `interface DetectedBox { x0: number; y0: number; x1: number; y1: number }`, `decodeDetection(probMap: Float32Array, mapWidth: number, mapHeight: number, ratioW: number, ratioH: number): DetectedBox[]`, `preprocessForDetection(imagePath: string): Promise<{ tensorData: Float32Array; width: number; height: number; ratioW: number; ratioH: number }>`, `runDetection(session: import('onnxruntime-node').InferenceSession, imagePath: string): Promise<DetectedBox[]>` — `DetectedBox[]` is consumed by Task 7 (assembly) and Task 5 (recognition crops each box).
 
-- [ ] **Step 1: Write the failing test for `decodeDetection`**
+- [x] **Step 1: Write the failing test for `decodeDetection`**
 
 A 10x10 probability map with one 4x4 high-probability blob at (2,2)-(5,5), everything else 0. `box_thresh` is checked against the component's mean probability; `unclip_ratio` expands the box using DB's real formula `distance = area * unclipRatio / perimeter`, applied on all four sides.
 
@@ -457,13 +457,14 @@ describe('decodeDetection', () => {
     const map = buildProbMap(10, 10, [[2, 2, 5, 5]], 0.9)
     const boxes = decodeDetection(map, 10, 10, 1, 1, { thresh: 0.3, boxThresh: 0.6, unclipRatio: 1.5 })
     expect(boxes).toHaveLength(1)
-    // raw box is (2,2)-(5,5): width=4 height=4 area=16 perimeter=16
-    // distance = 16 * 1.5 / 16 = 1.5
+    // component spans inclusive pixel indices [2,5] on both axes, so in
+    // continuous coordinates the box is (2,2)-(6,6): width=4 height=4
+    // area=16 perimeter=16, distance = 16 * 1.5 / 16 = 1.5
     const box = boxes[0]
     expect(box.x0).toBeCloseTo(0.5, 5)
     expect(box.y0).toBeCloseTo(0.5, 5)
-    expect(box.x1).toBeCloseTo(6.5, 5)
-    expect(box.y1).toBeCloseTo(6.5, 5)
+    expect(box.x1).toBeCloseTo(7.5, 5)
+    expect(box.y1).toBeCloseTo(7.5, 5)
   })
 
   it('rejects a blob whose mean probability is below box_thresh', () => {
@@ -478,9 +479,9 @@ describe('decodeDetection', () => {
     // original = model_coordinate / ratioW
     const boxes = decodeDetection(map, 10, 10, 2, 1, { thresh: 0.3, boxThresh: 0.6, unclipRatio: 1.5 })
     expect(boxes[0].x0).toBeCloseTo(0.25, 5)
-    expect(boxes[0].x1).toBeCloseTo(3.25, 5)
+    expect(boxes[0].x1).toBeCloseTo(3.75, 5)
     expect(boxes[0].y0).toBeCloseTo(0.5, 5)
-    expect(boxes[0].y1).toBeCloseTo(6.5, 5)
+    expect(boxes[0].y1).toBeCloseTo(7.5, 5)
   })
 
   it('returns an empty array when nothing is above thresh', () => {
@@ -490,12 +491,12 @@ describe('decodeDetection', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/detect.test.ts`
 Expected: FAIL — module doesn't exist.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // src/main/ocr/paddle/detect.ts
@@ -610,12 +611,12 @@ export const runDetection = async (session: InferenceSession, imagePath: string)
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/detect.test.ts`
 Expected: PASS (4 tests)
 
-- [ ] **Step 5: Verify `runDetection` end-to-end against the real exported model and a real fixture image**
+- [x] **Step 5: Verify `runDetection` end-to-end against the real exported model and a real fixture image**
 
 This is the first point this plan touches a real `.onnx` file — confirm it loads and produces plausible boxes before building anything on top of it.
 
@@ -636,7 +637,7 @@ main()
 
 Expected: a plausible number of boxes for a two-column recipe page (tens, not zero and not thousands) with coordinates inside the image's actual pixel dimensions. If this throws about a tensor shape mismatch, re-check the input tensor's dimension order and name against `session.inputNames`/`session.inputMetadata` logged from Task 0 Step 3.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/main/ocr/paddle/detect.ts src/main/ocr/paddle/__tests__/detect.test.ts
