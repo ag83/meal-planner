@@ -655,11 +655,13 @@ Per Task 0: `CTCLabelDecode` prepends a `blank` token at class index 0, so class
 - Test: `src/main/ocr/paddle/__tests__/ctcDecode.test.ts`
 
 **Interfaces:**
-- Produces: `ctcGreedyDecode(logits: Float32Array, timeSteps: number, numClasses: number, dict: readonly string[]): { text: string; confidence: number }` — consumed by Task 5.
+- Produces: `ctcGreedyDecode(probs: Float32Array, timeSteps: number, numClasses: number, dict: readonly string[]): { text: string; confidence: number }` — consumed by Task 5.
+
+**Verified during plan execution:** the parameter is named `probs`, not `logits` — `rec.onnx`'s exported graph already applies softmax internally (PaddleOCR's own export convention). Applying softmax a second time here was tried first and crushed a correct, ~0.98-confidence real decode down to ~0.005 while leaving the decoded text itself unaffected (argmax is invariant to a monotonic rescaling, so the bug was invisible in text-only assertions). The implementation below takes the per-step maximum value directly as its probability, matching PaddleOCR's own `CTCLabelDecode.decode()`.
 
 - [x] **Step 1: Write the failing test**
 
-Greedy CTC decode: at each timestep, take the argmax class; collapse consecutive repeats of the *same* class into one; drop every occurrence of class 0 (blank) — including a blank between two instances of the same real character, which is exactly what allows CTC to represent a doubled letter.
+Greedy CTC decode: at each timestep, take the argmax class; collapse consecutive repeats of the *same* class into one; drop every occurrence of class 0 (blank) — including a blank between two instances of the same real character, which is exactly what allows CTC to represent a doubled letter. Test fixtures use probability-like values (a dominant class near 1, others near 0), not unbounded logits, since that's the real shape of `rec.onnx`'s output.
 
 ```typescript
 // src/main/ocr/paddle/__tests__/ctcDecode.test.ts
@@ -668,50 +670,50 @@ import { ctcGreedyDecode } from '../ctcDecode'
 
 const dict = ['a', 'b', 'c'] // class 1='a', class 2='b', class 3='c'; class 0 is blank
 
-const logitsFromClasses = (classes: number[], numClasses: number): Float32Array => {
-  const logits = new Float32Array(classes.length * numClasses)
+const probsFromClasses = (classes: number[], numClasses: number): Float32Array => {
+  const probs = new Float32Array(classes.length * numClasses)
   classes.forEach((cls, t) => {
-    logits[t * numClasses + cls] = 10 // dominant logit for the chosen class
+    probs[t * numClasses + cls] = 1 // dominant probability for the chosen class
   })
-  return logits
+  return probs
 }
 
 describe('ctcGreedyDecode', () => {
   it('decodes a simple sequence with no repeats or blanks', () => {
-    const logits = logitsFromClasses([1, 2, 3], 4)
-    const result = ctcGreedyDecode(logits, 3, 4, dict)
+    const probs = probsFromClasses([1, 2, 3], 4)
+    const result = ctcGreedyDecode(probs, 3, 4, dict)
     expect(result.text).toBe('abc')
   })
 
   it('collapses consecutive repeated classes into one character', () => {
-    const logits = logitsFromClasses([1, 1, 1, 2], 4)
-    const result = ctcGreedyDecode(logits, 4, 4, dict)
+    const probs = probsFromClasses([1, 1, 1, 2], 4)
+    const result = ctcGreedyDecode(probs, 4, 4, dict)
     expect(result.text).toBe('ab')
   })
 
   it('drops blank (class 0) entirely, including between repeats to produce a doubled letter', () => {
-    const logits = logitsFromClasses([1, 0, 1], 4)
-    const result = ctcGreedyDecode(logits, 3, 4, dict)
+    const probs = probsFromClasses([1, 0, 1], 4)
+    const result = ctcGreedyDecode(probs, 3, 4, dict)
     expect(result.text).toBe('aa')
   })
 
   it('returns an empty string and zero confidence for an all-blank sequence', () => {
-    const logits = logitsFromClasses([0, 0, 0], 4)
-    const result = ctcGreedyDecode(logits, 3, 4, dict)
+    const probs = probsFromClasses([0, 0, 0], 4)
+    const result = ctcGreedyDecode(probs, 3, 4, dict)
     expect(result.text).toBe('')
     expect(result.confidence).toBe(0)
   })
 
-  it('averages confidence over the kept (non-blank, non-repeat) characters only', () => {
-    // class 1 at t=0 with logit 10 among [10,0,0,0] -> softmax prob close to 1
-    // class 1 repeated at t=1 is dropped from the average (it's a collapsed repeat)
+  it('averages confidence over the kept (non-blank, non-repeat) characters only, using the max probability directly', () => {
+    // class 1 dominant at both timesteps with probability 0.97; class 1
+    // repeated at t=1 is dropped from the average (it's a collapsed repeat)
     const numClasses = 4
-    const logits = new Float32Array(2 * numClasses)
-    logits.set([0, 10, 0, 0], 0)
-    logits.set([0, 10, 0, 0], numClasses)
-    const result = ctcGreedyDecode(logits, 2, numClasses, dict)
+    const probs = new Float32Array(2 * numClasses)
+    probs.set([0.01, 0.97, 0.01, 0.01], 0)
+    probs.set([0.01, 0.97, 0.01, 0.01], numClasses)
+    const result = ctcGreedyDecode(probs, 2, numClasses, dict)
     expect(result.text).toBe('a')
-    expect(result.confidence).toBeGreaterThan(0.9)
+    expect(result.confidence).toBeCloseTo(0.97, 5)
   })
 })
 ```
@@ -727,25 +729,27 @@ Expected: FAIL — module doesn't exist.
 // src/main/ocr/paddle/ctcDecode.ts
 const BLANK_CLASS = 0
 
-const softmaxMax = (logitsForStep: Float32Array): { classIdx: number; prob: number } => {
+// rec.onnx's exported graph already applies softmax internally (verified
+// empirically: applying softmax again here crushed a correct, ~0.99-confidence
+// decode down to ~0.005 while leaving the chosen class — and so the decoded
+// text — unaffected, since argmax is invariant to a monotonic rescaling).
+// So this takes the per-step probability directly, matching PaddleOCR's own
+// CTCLabelDecode.decode(), which does the same: argmax + max() on its input
+// with no extra normalization.
+const argmax = (probsForStep: Float32Array): { classIdx: number; prob: number } => {
   let maxVal = -Infinity
   let classIdx = 0
-  for (let c = 0; c < logitsForStep.length; c++) {
-    if (logitsForStep[c] > maxVal) {
-      maxVal = logitsForStep[c]
+  for (let c = 0; c < probsForStep.length; c++) {
+    if (probsForStep[c] > maxVal) {
+      maxVal = probsForStep[c]
       classIdx = c
     }
   }
-  let sumExp = 0
-  for (let c = 0; c < logitsForStep.length; c++) {
-    sumExp += Math.exp(logitsForStep[c] - maxVal)
-  }
-  const prob = 1 / sumExp // exp(maxVal - maxVal) / sumExp
-  return { classIdx, prob }
+  return { classIdx, prob: maxVal }
 }
 
 export const ctcGreedyDecode = (
-  logits: Float32Array,
+  probs: Float32Array,
   timeSteps: number,
   numClasses: number,
   dict: readonly string[]
@@ -755,8 +759,8 @@ export const ctcGreedyDecode = (
   const confidences: number[] = []
 
   for (let t = 0; t < timeSteps; t++) {
-    const stepLogits = logits.subarray(t * numClasses, (t + 1) * numClasses)
-    const { classIdx, prob } = softmaxMax(stepLogits)
+    const stepProbs = probs.subarray(t * numClasses, (t + 1) * numClasses)
+    const { classIdx, prob } = argmax(stepProbs)
 
     if (classIdx === BLANK_CLASS) {
       lastClass = BLANK_CLASS
@@ -801,7 +805,7 @@ Per Task 0's config: input shape `[1, 3, 48, W]` with `W` dynamic, BGR decode. T
 - Consumes: `rgbaToChwFloat32` (Task 1), `ctcGreedyDecode` (Task 4), `DetectedBox` (Task 3).
 - Produces: `loadDictionary(fileContents: string): string[]`, `runRecognition(session: InferenceSession, imagePath: string, box: DetectedBox, dict: readonly string[]): Promise<{ text: string; confidence: number }>` — consumed by Task 8 (worker pool orchestration).
 
-- [ ] **Step 1: Write the failing test for `loadDictionary`**
+- [x] **Step 1: Write the failing test for `loadDictionary`**
 
 ```typescript
 // src/main/ocr/paddle/__tests__/recognize.test.ts
@@ -829,12 +833,12 @@ describe('loadDictionary', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/recognize.test.ts`
 Expected: FAIL — module doesn't exist.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `loadDictionary` cannot simply `.filter(Boolean)` on a line split (that was `ctcDecode.test.ts`'s own dict, hand-built) — the real file can contain a line that is a single space character, which is falsy-looking but meaningful; only the trailing empty line from the file's final newline should be dropped. Split on `\r?\n` (not a plain `'\n'`) so a stray `\r` from CRLF line endings is never left attached to a character.
 
@@ -863,12 +867,25 @@ export const runRecognition = async (
   box: DetectedBox,
   dict: readonly string[]
 ): Promise<{ text: string; confidence: number }> => {
-  const cropWidth = Math.max(1, Math.round(box.x1 - box.x0))
-  const cropHeight = Math.max(1, Math.round(box.y1 - box.y0))
+  const image = sharp(imagePath)
+  const metadata = await image.metadata()
+  const imageWidth = metadata.width ?? 0
+  const imageHeight = metadata.height ?? 0
+
+  // DB's unclip expansion (detect.ts) can push a box slightly outside the
+  // image bounds (e.g. a negative top near the top edge) — verified during
+  // plan execution: a real detected box crashed sharp.extract() this way.
+  // Clamp to the real image first.
+  const left = Math.max(0, Math.round(box.x0))
+  const top = Math.max(0, Math.round(box.y0))
+  const right = Math.min(imageWidth, Math.round(box.x1))
+  const bottom = Math.min(imageHeight, Math.round(box.y1))
+  const cropWidth = Math.max(1, right - left)
+  const cropHeight = Math.max(1, bottom - top)
   const targetWidth = Math.max(1, Math.round((cropWidth / cropHeight) * RECOGNIZER_HEIGHT))
 
-  const { data } = await sharp(imagePath)
-    .extract({ left: Math.round(box.x0), top: Math.round(box.y0), width: cropWidth, height: cropHeight })
+  const { data } = await image
+    .extract({ left, top, width: cropWidth, height: cropHeight })
     .resize(targetWidth, RECOGNIZER_HEIGHT, { fit: 'fill' })
     .raw()
     .toBuffer({ resolveWithObject: true })
@@ -887,12 +904,12 @@ export const runRecognition = async (
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/recognize.test.ts`
 Expected: PASS (2 tests)
 
-- [ ] **Step 5: Verify `runRecognition` end-to-end against the real exported model**
+- [x] **Step 5: Verify `runRecognition` end-to-end against the real exported model**
 
 ```typescript
 // scratch check, not committed — run with: npx tsx <this file>
@@ -903,24 +920,27 @@ import { runRecognition, loadDictionary } from './src/main/ocr/paddle/recognize'
 const main = async (): Promise<void> => {
   const session = await InferenceSession.create('resources/models/rec.onnx')
   const dict = loadDictionary(fs.readFileSync('resources/eslav-dict.txt', 'utf-8'))
-  // box coordinates below are a guess at the title line on this fixture; adjust
-  // after Task 3's detection step reports real boxes for this image, or crop
-  // visually to find a line's approximate box for this one-off check.
+  // real box from Task 3's detection run against this same image (the title line)
   const result = await runRecognition(
     session,
     'src/main/ocr/__tests__/fixtures/images/pork-two-column.png',
-    { x0: 60, y0: 10, x1: 400, y1: 60 },
+    { x0: 64.1, y0: -0.67, x1: 498.4, y1: 52.6 },
     dict
   )
-  console.log(result)
+  console.log(JSON.stringify(result))
 }
 
 main()
 ```
 
-Expected: recognizable Cyrillic text (the title "Свинина со свитой" per the spec's Investigation section), not garbage or an empty string. If output is empty, check `dims` ordering — some ONNX exports put the class dimension before the time dimension (`[1, numClasses, T]` instead of `[1, T, numClasses]`); if so, `runRecognition` needs `dims[1]`/`dims[2]` swapped and the stride in `ctcGreedyDecode`'s caller adjusted to match.
+Expected: recognizable Cyrillic text (the title "Свинина со свитой" per the spec's Investigation section), not garbage or an empty string. **Verified during plan execution:** got exactly `{"text":"Свинина со свитой","confidence":0.9796...}` — but only after two fixes, both now folded into the implementation above:
 
-- [ ] **Step 6: Commit**
+1. The real detected box's `y0` is slightly negative (`-0.67`, from DB's unclip expansion near the top edge) — `sharp.extract()` throws on an out-of-range region, hence the clamping in `runRecognition`.
+2. First run produced the exact right text but `confidence: 0.005` — the double-softmax bug described in Task 4's note above. Fixed there, not here; this task's code already reflects the fix.
+
+If output is empty, check `dims` ordering — some ONNX exports put the class dimension before the time dimension (`[1, numClasses, T]` instead of `[1, T, numClasses]`); if so, `runRecognition` needs `dims[1]`/`dims[2]` swapped and the stride in `ctcGreedyDecode`'s caller adjusted to match.
+
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/main/ocr/paddle/recognize.ts src/main/ocr/paddle/__tests__/recognize.test.ts
