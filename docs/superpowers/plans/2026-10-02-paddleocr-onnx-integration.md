@@ -37,7 +37,7 @@ This task produces binary artifacts, not application code. It has no TDD red/gre
 - Produces: three `.onnx` files consumed by Tasks 3, 5, 6 via `onnxruntime-node`'s `InferenceSession.create(path)`.
 - Produces: `resources/eslav-dict.txt`, one character per line, consumed by Task 4.
 
-- [ ] **Step 1: Write the export script**
+- [x] **Step 1: Write the export script**
 
 The three source models are the PaddleX "inference model" directories already cached locally at `C:\Users\AG\.paddlex\official_models\<name>\` (or wherever `PaddleOCR(lang="ru")` / `PPStructureV3(lang="ru", use_region_detection=False)` downloaded them during the investigation that produced the spec — if they are not present, running those two constructors once downloads them). `paddle2onnx` 2.1.0 (latest) failed to import on Windows during that investigation (`DLL load failed... paddle2onnx_cpp2py_export`) — confirmed again during plan execution. `paddle2onnx` **1.3.1** does import successfully on Windows and provides the same `--model_dir`/`--model_filename`/`--params_filename`/`--save_file` CLI flags, but ships no `__main__.py`, so it must be invoked as the `paddle2onnx` console-script executable directly, not via `python -m paddle2onnx`. Install it with `pip install paddle2onnx==1.3.1`. If 1.3.1 ever stops working too, fall back to running this script under WSL/Linux/CI instead — it does not need to run on the same machine as the rest of this plan, since its output is three portable files.
 
@@ -112,7 +112,7 @@ resources/eslav-dict.txt text eol=lf
 resources/models/*.onnx binary
 ```
 
-- [ ] **Step 2: Run the export**
+- [x] **Step 2: Run the export**
 
 ```bash
 python scripts/export-onnx-models.py
@@ -120,7 +120,9 @@ python scripts/export-onnx-models.py
 
 Expected: three `.onnx` files under `resources/models/`, and `resources/eslav-dict.txt` with one character per line (518 lines: 517 from `eslav_PP-OCRv5_mobile_rec`'s `character_dict` array plus the appended space — verified empirically during plan execution; if the `character_dict` count differs because PaddleOCR shipped an updated dictionary, that's fine, downstream code reads the file's actual length, nothing hardcodes 518).
 
-- [ ] **Step 3: Sanity-check the exports load and report the shapes this plan assumes**
+Actually run on this machine via WSL/Ubuntu, not native Windows Python — `paddle2onnx` 1.3.1 imports on Windows but can't parse the newer PIR-format `inference.json` these PaddleX models use (produced empty 0-byte `.onnx` files, silently, since the CLI exits 0 even on failure); `paddle2onnx` 2.1.0 understands the format but never imports on Windows at all. Both work fine on Linux. Real export was done in a `uv`-managed Python 3.12 venv inside WSL Ubuntu (the distro's own default Python, 3.14, has no `paddlepaddle` wheel yet), after installing the `libgomp1` system library `paddlepaddle` needs. Resulting files: `det.onnx` 88,045,223 bytes, `layout.onnx` 129,841,520 bytes, `rec.onnx` 7,887,531 bytes.
+
+- [x] **Step 3: Sanity-check the exports load and report the shapes this plan assumes**
 
 ```python
 # scripts/verify-onnx-exports.py (throwaway — run once, do not commit)
