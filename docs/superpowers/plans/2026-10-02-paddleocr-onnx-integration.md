@@ -86,13 +86,30 @@ for model_name, out_name in EXPORTS:
     )
     print(f"exported {model_dir.name} -> {out_path}")
 
-# Recognizer dictionary: CTCLabelDecode prepends a blank token at index 0,
-# so dict.txt line N (0-indexed) corresponds to class index N+1.
+# Recognizer dictionary: PaddleOCR's BaseRecLabelDecode appends a literal
+# space character (use_space_char=True by default) before CTCLabelDecode
+# prepends the blank token at index 0. So the real class layout is:
+#   index 0            -> blank
+#   index 1..N         -> character_dict[0..N-1]
+#   index N+1 (last)   -> ' ' (space, appended here, not in character_dict)
+# Verified empirically against rec.onnx: character_dict had 517 entries,
+# the exported model has 519 output classes (517 + blank + space).
+# write_bytes (not write_text) to force LF line endings regardless of
+# platform — write_text on Windows translates \n to \r\n, which would
+# silently corrupt every dictionary character with a trailing \r once
+# read back with a plain split('\n').
 rec_config = json.loads((MODELS_ROOT / "eslav_PP-OCRv5_mobile_rec" / "config.json").read_text(encoding="utf-8"))
-chars = rec_config["PostProcess"]["character_dict"]
+chars = rec_config["PostProcess"]["character_dict"] + [" "]
 dict_path = Path(__file__).resolve().parent.parent / "resources" / "eslav-dict.txt"
-dict_path.write_text("\n".join(chars) + "\n", encoding="utf-8")
-print(f"wrote {len(chars)} characters -> {dict_path}")
+dict_path.write_bytes(("\n".join(chars) + "\n").encode("utf-8"))
+print(f"wrote {len(chars)} characters (including trailing space) -> {dict_path}")
+```
+
+Also add to `.gitattributes` (create it if it doesn't exist) so git's `autocrlf` never rewrites this file's line endings on checkout, which would reintroduce the exact corruption above:
+
+```
+resources/eslav-dict.txt text eol=lf
+resources/models/*.onnx binary
 ```
 
 - [ ] **Step 2: Run the export**
@@ -101,7 +118,7 @@ print(f"wrote {len(chars)} characters -> {dict_path}")
 python scripts/export-onnx-models.py
 ```
 
-Expected: three `.onnx` files under `resources/models/`, and `resources/eslav-dict.txt` with one character per line (476 lines, matching `eslav_PP-OCRv5_mobile_rec`'s `character_dict` array length at the time the spec was written — if the count differs, PaddleOCR shipped a different dictionary; that's fine, downstream code reads the file's actual length, nothing hardcodes 476).
+Expected: three `.onnx` files under `resources/models/`, and `resources/eslav-dict.txt` with one character per line (518 lines: 517 from `eslav_PP-OCRv5_mobile_rec`'s `character_dict` array plus the appended space — verified empirically during plan execution; if the `character_dict` count differs because PaddleOCR shipped an updated dictionary, that's fine, downstream code reads the file's actual length, nothing hardcodes 518).
 
 - [ ] **Step 3: Sanity-check the exports load and report the shapes this plan assumes**
 
@@ -123,7 +140,17 @@ for name in ["det.onnx", "rec.onnx", "layout.onnx"]:
 python scripts/verify-onnx-exports.py
 ```
 
-Expected: `det.onnx` and `rec.onnx` each show one input named `x` with a 4D shape containing dynamic dimensions (height/width marked as strings or `-1`, not fixed numbers) — if width shows as a fixed number instead of dynamic, the source model's dynamic-shape declaration was lost during export and Task 5's variable-width recognition will not work; re-export is required before continuing. Record `layout.onnx`'s actual output names and shapes here — Task 6 Step 1 depends on this exact output, and this plan does not assume a specific one because PaddleDetection's DETR export can bake post-processing into the graph in more than one way.
+Expected: `det.onnx` and `rec.onnx` each show one input named `x` with a 4D shape containing dynamic dimensions (height/width marked as strings or `-1`, not fixed numbers) — if width shows as a fixed number instead of dynamic, the source model's dynamic-shape declaration was lost during export and Task 5's variable-width recognition will not work; re-export is required before continuing.
+
+**Verified during plan execution** (recorded here so Task 6 doesn't have to rediscover it): `layout.onnx` is not a bare DETR output — it's PaddleDetection's standard three-input serving contract:
+
+- Inputs: `image` (`[N,3,800,800]` float, the resized/normalized pixels), `im_shape` (`[N,2]` float, the resized height/width — always `[800,800]`), `scale_factor` (`[N,2]` float, `[800/originalHeight, 800/originalWidth]`).
+- Outputs: `fetch_name_0` (`[M,6]` float, rows of `[labelId, score, x0, y0, x1, y1]`) and `fetch_name_1` (`[N]` int32, a `bbox_num`-per-image count — irrelevant for this app's always-batch-size-1 calls).
+- Boxes in `fetch_name_0` are **already in original image pixel coordinates** — the graph does the `scale_factor` rescaling internally. No manual rescale is needed or correct in `decodeLayout`.
+- The model emits many overlapping candidate boxes per real region at different label guesses (e.g. the title region showed up three times: `text` at score 0.70, `paragraph_title` at 0.46, `doc_title` at 0.32) — this is **not** NMS output. A plain score threshold at 0.5 is sufficient to resolve this on the beef fixture: exactly six rows survive, one per real region, each the correct label, with coordinates matching the regions already recorded in this spec's Investigation section almost exactly (e.g. row 2 `[48.6, 472.4, 423.0, 951.0]` vs. the recorded step-1 region `[48, 472, 423, 951]`). No separate per-region deduplication step is needed.
+- `labelId` is a direct 0-indexed index into `LAYOUT_LABELS` (confirmed: `labelId=1` → `LAYOUT_LABELS[1]` = `'image'`, matched the photo region; `labelId=2` → `'text'`, matched every text region).
+
+This replaces Task 6's original Shape-A/Shape-B uncertainty entirely — Task 6 below is written directly against this confirmed contract, not as a discovery step.
 
 - [ ] **Step 4: Commit**
 
@@ -618,7 +645,7 @@ git commit -m "feat(ocr): add DB text detection against the ONNX detector"
 
 ## Task 4: CTC decode for the recognizer
 
-Per Task 0: `CTCLabelDecode` prepends a `blank` token at class index 0, so class index `i` for `i >= 1` maps to `dict[i - 1]` (the dictionary file written in Task 0 has no blank entry — that's implicit).
+Per Task 0: `CTCLabelDecode` prepends a `blank` token at class index 0, so class index `i` for `i >= 1` maps to `dict[i - 1]` (the dictionary file written in Task 0 has no blank entry — that's implicit — but does already include the trailing space character PaddleOCR's `use_space_char` adds, since Task 0 appends it when writing the file; verified empirically that 517 `character_dict` entries + blank + space = 519, matching `rec.onnx`'s real output class count exactly).
 
 **Files:**
 - Create: `src/main/ocr/paddle/ctcDecode.ts`
@@ -788,6 +815,14 @@ describe('loadDictionary', () => {
     const contents = 'a\n \nb\n'
     expect(loadDictionary(contents)).toEqual(['a', ' ', 'b'])
   })
+
+  it('strips a trailing carriage return from CRLF line endings without losing a real trailing space', () => {
+    // guards against git's core.autocrlf rewriting resources/eslav-dict.txt despite
+    // the .gitattributes entry Task 0 adds — this file is read byte-by-byte as
+    // meaningful characters, so a stray \r would silently corrupt every entry
+    const contents = 'a\r\n \r\nb\r\n'
+    expect(loadDictionary(contents)).toEqual(['a', ' ', 'b'])
+  })
 })
 ```
 
@@ -798,7 +833,7 @@ Expected: FAIL — module doesn't exist.
 
 - [ ] **Step 3: Write the implementation**
 
-`loadDictionary` cannot simply `.filter(Boolean)` on a line split (that was `ctcDecode.test.ts`'s own dict, hand-built) — the real file can contain a line that is a single space character, which is falsy-looking but meaningful; only the trailing empty line from the file's final newline should be dropped.
+`loadDictionary` cannot simply `.filter(Boolean)` on a line split (that was `ctcDecode.test.ts`'s own dict, hand-built) — the real file can contain a line that is a single space character, which is falsy-looking but meaningful; only the trailing empty line from the file's final newline should be dropped. Split on `\r?\n` (not a plain `'\n'`) so a stray `\r` from CRLF line endings is never left attached to a character.
 
 ```typescript
 // src/main/ocr/paddle/recognize.ts
@@ -814,7 +849,7 @@ const REC_MEAN: readonly [number, number, number] = [0.5, 0.5, 0.5]
 const REC_STD: readonly [number, number, number] = [0.5, 0.5, 0.5]
 
 export const loadDictionary = (fileContents: string): string[] => {
-  const lines = fileContents.split('\n')
+  const lines = fileContents.split(/\r?\n/)
   if (lines[lines.length - 1] === '') lines.pop()
   return lines
 }
@@ -893,110 +928,94 @@ git commit -m "feat(ocr): add text recognition against the eslav ONNX recognizer
 
 ## Task 6: Layout detection
 
-Per Task 0's config, `PP-DocLayout_plus-L` is a DETR-family detector (`"arch": "DETR"`): DETR is end-to-end set prediction, so unlike the DB detector there is **no NMS step** — just a score threshold (`draw_threshold: 0.5` in the config). Input is a fixed 800x800 resize with no aspect-ratio preservation (`"keep_ratio": false`) and no normalization beyond scaling to `[0, 1]` (`mean=[0,0,0]`, `std=[1,1,1]`, `norm_type: "none"`).
+**Verified empirically during plan execution** (superseding the discovery-step framing this task originally had): `layout.onnx` is PaddleDetection's standard three-input serving contract, not a bare DETR output.
+
+- Inputs: `image` (`[N,3,800,800]` float32, resized via plain stretch — `"keep_ratio": false` in `PP-DocLayout_plus-L/config.json` — and scaled to `[0,1]` only, no mean/std subtraction per `norm_type: "none"`), `im_shape` (`[N,2]` float32, always `[800,800]`), `scale_factor` (`[N,2]` float32, `[800/originalHeight, 800/originalWidth]`).
+- Output `fetch_name_0`: `[M,6]` float32, each row `[labelId, score, x0, y0, x1, y1]`, **already in original image pixel coordinates** — the graph applies `scale_factor` internally. There is no manual rescale step in this task's code.
+- Output `fetch_name_1`: `[N]` int32, a `bbox_num`-per-image count. Not used — this app always calls with a single image, so it's always `[M]`.
+- `labelId` is a direct 0-indexed index into `LAYOUT_LABELS` below (confirmed: `labelId=1` → `'image'` matched the real photo region; `labelId=2` → `'text'` matched every real text region on the beef fixture).
+- The model emits many overlapping low-score candidates per real region (e.g. the beef fixture's title region appeared three times: label `text` score 0.70, `paragraph_title` score 0.46, `doc_title` score 0.32) — this is pre-final-threshold output, not NMS'd across classes. A plain `score >= 0.5` filter resolved this correctly: exactly six rows survived on the beef fixture, one per real region, with coordinates matching the regions already recorded in the spec's Investigation section (e.g. `[48.6, 472.4, 423.0, 951.0]` vs. the recorded step-1 region `[48, 472, 423, 951]`). No additional per-region deduplication is needed.
+- On the beef fixture, the **title region's own top-scoring label after thresholding is `text`** (0.70), not `title` — `paragraph_title` (0.46) and `doc_title` (0.32) both score below 0.5 for that exact box. This is harmless: `LABEL_MAP` below treats `text` and `title` identically everywhere downstream (`assemble.ts` only special-cases `image`), so the region still produces a correct OCR'd paragraph — it's just not specially flagged as a title. Don't "fix" this by lowering the threshold for `paragraph_title`/`doc_title` specifically; that would resurface the overlapping-candidate problem for every other region too.
 
 Per the spec's Investigation, `PP-DocBlockLayout` is **not** used by this plan — re-running the layout pipeline with `use_region_detection=False` produced byte-identical output on the beef fixture image, confirming it's not needed for `text`/`title`/`image` region labels.
-
-The exact output tensor layout of the exported `layout.onnx` is not yet known (Task 0 Step 3 is where it gets recorded) — DETR ONNX exports vary in whether post-processing (score threshold, box format conversion) is baked into the graph. Step 1 below starts by inspecting the real file rather than assuming.
 
 **Files:**
 - Create: `src/main/ocr/paddle/layout.ts`
 - Test: `src/main/ocr/paddle/__tests__/layout.test.ts`
 
 **Interfaces:**
-- Produces: `interface LayoutRegion { x0: number; y0: number; x1: number; y1: number; label: 'text' | 'title' | 'image' }`, `decodeLayout(boxes: Float32Array, scores: Float32Array, labels: Float32Array, numBoxes: number, threshold?: number): LayoutRegion[]`, `runLayout(session: InferenceSession, imagePath: string): Promise<LayoutRegion[]>` — `LayoutRegion[]` is consumed by Task 7 (reading order) and Task 8 (assembly).
+- Produces: `interface LayoutRegion { x0: number; y0: number; x1: number; y1: number; label: 'text' | 'title' | 'image' }`, `decodeLayout(rows: Float32Array, numRows: number, threshold?: number): LayoutRegion[]`, `runLayout(session: InferenceSession, imagePath: string): Promise<LayoutRegion[]>` — `LayoutRegion[]` is consumed by Task 7 (reading order) and Task 8 (assembly).
 
-- [ ] **Step 1: Inspect the real exported model's output shape**
+- [ ] **Step 1: Write the failing test**
 
-```typescript
-// scratch check, not committed — run with: npx tsx <this file>
-import { InferenceSession } from 'onnxruntime-node'
-
-const main = async (): Promise<void> => {
-  const session = await InferenceSession.create('resources/models/layout.onnx')
-  console.log('inputs:', session.inputNames, session.inputMetadata)
-  console.log('outputs:', session.outputNames, session.outputMetadata)
-}
-
-main()
-```
-
-Record the result here before writing Step 3's implementation. Two shapes are both plausible for a PaddleDetection DETR export and this plan must handle whichever is real:
-
-- **Shape A (single combined output):** one output tensor of shape `[numBoxes, 6]`, each row `[label, score, x0, y0, x1, y1]` in resized (800x800) pixel coordinates — this is PaddleDetection's own standard "bbox" output format, used across its non-DETR models too.
-- **Shape B (separate tensors):** three outputs — boxes `[1, numBoxes, 4]`, scores `[1, numBoxes, numClasses]` (one score per class, take the max), and nothing separate for labels (the label is `argmax` over the per-class score vector).
-
-`decodeLayout`'s signature above assumes Shape B, since it is the more common raw DETR export; if Task 0/Step 1 of this task finds Shape A instead, change the signature to `decodeLayout(combined: Float32Array, numBoxes: number, threshold?: number)` and adjust Step 3's test and implementation accordingly — the label-filtering and coordinate-rescaling logic is the same either way.
-
-- [ ] **Step 2: Write the failing test** (written against Shape B; adjust indices if Step 1 found Shape A)
-
-`LAYOUT_LABELS` is the `label_list` recorded verbatim from `PP-DocLayout_plus-L/config.json` in Task 0's investigation; class index `i` in the model's score vector corresponds to `LAYOUT_LABELS[i]`.
+`LAYOUT_LABELS` is the `label_list` recorded verbatim from `PP-DocLayout_plus-L/config.json` during Task 0's investigation; `rows` is the flattened `fetch_name_0` output — row `i`'s six values live at `rows[i*6 .. i*6+5]`.
 
 ```typescript
 // src/main/ocr/paddle/__tests__/layout.test.ts
 import { describe, it, expect } from 'vitest'
 import { decodeLayout, LAYOUT_LABELS } from '../layout'
 
+const makeRow = (labelId: number, score: number, x0: number, y0: number, x1: number, y1: number): number[] => [
+  labelId, score, x0, y0, x1, y1
+]
+
 describe('decodeLayout', () => {
-  it('keeps a box whose top class is "text" and above threshold', () => {
-    const textClassIdx = LAYOUT_LABELS.indexOf('text')
-    const numClasses = LAYOUT_LABELS.length
-    const boxes = new Float32Array([10, 20, 100, 200]) // one box, [x0,y0,x1,y1]
-    const scores = new Float32Array(numClasses)
-    scores[textClassIdx] = 0.9
-    const regions = decodeLayout(boxes, scores, 1, numClasses, 0.5, 800, 800, 1279, 963)
-    expect(regions).toEqual([{ x0: expect.any(Number), y0: expect.any(Number), x1: expect.any(Number), y1: expect.any(Number), label: 'text' }])
+  it('keeps a row labeled "text" above threshold', () => {
+    const textId = LAYOUT_LABELS.indexOf('text')
+    const rows = new Float32Array(makeRow(textId, 0.9, 10, 20, 100, 200))
+    const regions = decodeLayout(rows, 1, 0.5)
+    expect(regions).toEqual([{ x0: 10, y0: 20, x1: 100, y1: 200, label: 'text' }])
   })
 
   it('maps paragraph_title and doc_title both to label "title"', () => {
-    const numClasses = LAYOUT_LABELS.length
-    const paragraphTitleIdx = LAYOUT_LABELS.indexOf('paragraph_title')
-    const boxes = new Float32Array([10, 20, 100, 200])
-    const scores = new Float32Array(numClasses)
-    scores[paragraphTitleIdx] = 0.9
-    const regions = decodeLayout(boxes, scores, 1, numClasses, 0.5, 800, 800, 1279, 963)
-    expect(regions[0].label).toBe('title')
+    const paragraphTitleId = LAYOUT_LABELS.indexOf('paragraph_title')
+    const rows = new Float32Array(makeRow(paragraphTitleId, 0.9, 10, 20, 100, 200))
+    expect(decodeLayout(rows, 1, 0.5)[0].label).toBe('title')
   })
 
-  it('drops a box whose top class is a Non-goal label (e.g. table)', () => {
-    const numClasses = LAYOUT_LABELS.length
-    const tableIdx = LAYOUT_LABELS.indexOf('table')
-    const boxes = new Float32Array([10, 20, 100, 200])
-    const scores = new Float32Array(numClasses)
-    scores[tableIdx] = 0.9
-    const regions = decodeLayout(boxes, scores, 1, numClasses, 0.5, 800, 800, 1279, 963)
-    expect(regions).toEqual([])
+  it('drops a row whose label is a Non-goal (e.g. table)', () => {
+    const tableId = LAYOUT_LABELS.indexOf('table')
+    const rows = new Float32Array(makeRow(tableId, 0.9, 10, 20, 100, 200))
+    expect(decodeLayout(rows, 1, 0.5)).toEqual([])
   })
 
-  it('drops a box below the score threshold', () => {
-    const numClasses = LAYOUT_LABELS.length
-    const textClassIdx = LAYOUT_LABELS.indexOf('text')
-    const boxes = new Float32Array([10, 20, 100, 200])
-    const scores = new Float32Array(numClasses)
-    scores[textClassIdx] = 0.3
-    const regions = decodeLayout(boxes, scores, 1, numClasses, 0.5, 800, 800, 1279, 963)
-    expect(regions).toEqual([])
+  it('drops a row below the score threshold', () => {
+    const textId = LAYOUT_LABELS.indexOf('text')
+    const rows = new Float32Array(makeRow(textId, 0.3, 10, 20, 100, 200))
+    expect(decodeLayout(rows, 1, 0.5)).toEqual([])
   })
 
-  it('rescales box coordinates from the 800x800 model space back to original image dimensions', () => {
-    const numClasses = LAYOUT_LABELS.length
-    const textClassIdx = LAYOUT_LABELS.indexOf('text')
-    const boxes = new Float32Array([0, 0, 800, 800]) // full model-space box
-    const scores = new Float32Array(numClasses)
-    scores[textClassIdx] = 0.9
-    const regions = decodeLayout(boxes, scores, 1, numClasses, 0.5, 800, 800, 1279, 963)
-    expect(regions[0].x1).toBeCloseTo(1279, 1)
-    expect(regions[0].y1).toBeCloseTo(963, 1)
+  it('resolves overlapping multi-class candidates for the same region via the threshold alone', () => {
+    // mirrors the real beef-fixture title region: three labels for one box,
+    // only the top one clears 0.5
+    const textId = LAYOUT_LABELS.indexOf('text')
+    const titleId = LAYOUT_LABELS.indexOf('paragraph_title')
+    const docTitleId = LAYOUT_LABELS.indexOf('doc_title')
+    const rows = new Float32Array([
+      ...makeRow(textId, 0.70, 78, 18, 391, 130),
+      ...makeRow(titleId, 0.46, 78, 18, 391, 130),
+      ...makeRow(docTitleId, 0.32, 78, 18, 391, 130)
+    ])
+    const regions = decodeLayout(rows, 3, 0.5)
+    expect(regions).toEqual([{ x0: 78, y0: 18, x1: 391, y1: 130, label: 'text' }])
+  })
+
+  it('passes coordinates through unchanged — the graph already rescaled them', () => {
+    const imageId = LAYOUT_LABELS.indexOf('image')
+    const rows = new Float32Array(makeRow(imageId, 0.9, 445.4, 26.2, 1279.8, 654.5))
+    const region = decodeLayout(rows, 1, 0.5)[0]
+    expect(region.x0).toBeCloseTo(445.4, 1)
+    expect(region.x1).toBeCloseTo(1279.8, 1)
   })
 })
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/layout.test.ts`
 Expected: FAIL — module doesn't exist.
 
-- [ ] **Step 4: Write the implementation**
+- [ ] **Step 3: Write the implementation**
 
 ```typescript
 // src/main/ocr/paddle/layout.ts
@@ -1028,43 +1047,24 @@ export interface LayoutRegion {
   label: 'text' | 'title' | 'image'
 }
 
-export const decodeLayout = (
-  boxes: Float32Array,
-  scores: Float32Array,
-  numBoxes: number,
-  numClasses: number,
-  threshold: number,
-  modelWidth: number,
-  modelHeight: number,
-  originalWidth: number,
-  originalHeight: number
-): LayoutRegion[] => {
+export const decodeLayout = (rows: Float32Array, numRows: number, threshold = 0.5): LayoutRegion[] => {
   const regions: LayoutRegion[] = []
-  const scaleX = originalWidth / modelWidth
-  const scaleY = originalHeight / modelHeight
 
-  for (let i = 0; i < numBoxes; i++) {
-    let bestScore = -Infinity
-    let bestClass = -1
-    for (let c = 0; c < numClasses; c++) {
-      const score = scores[i * numClasses + c]
-      if (score > bestScore) {
-        bestScore = score
-        bestClass = c
-      }
-    }
-    if (bestScore < threshold) continue
+  for (let i = 0; i < numRows; i++) {
+    const base = i * 6
+    const labelId = rows[base]
+    const score = rows[base + 1]
+    if (score < threshold) continue
 
-    const rawLabel = LAYOUT_LABELS[bestClass]
+    const rawLabel = LAYOUT_LABELS[labelId]
     const mappedLabel = LABEL_MAP[rawLabel]
     if (mappedLabel === undefined) continue
 
-    const [x0, y0, x1, y1] = boxes.subarray(i * 4, i * 4 + 4)
     regions.push({
-      x0: x0 * scaleX,
-      y0: y0 * scaleY,
-      x1: x1 * scaleX,
-      y1: y1 * scaleY,
+      x0: rows[base + 2],
+      y0: rows[base + 3],
+      x1: rows[base + 4],
+      y1: rows[base + 5],
       label: mappedLabel
     })
   }
@@ -1083,47 +1083,38 @@ export const runLayout = async (session: InferenceSession, imagePath: string): P
     .toBuffer({ resolveWithObject: true })
 
   const pixelCount = LAYOUT_INPUT_SIZE * LAYOUT_INPUT_SIZE
-  const tensorData = new Float32Array(pixelCount * 3)
+  const imageTensorData = new Float32Array(pixelCount * 3)
   for (let i = 0; i < pixelCount; i++) {
     const base = i * 3
-    tensorData[i] = data[base] / 255
-    tensorData[pixelCount + i] = data[base + 1] / 255
-    tensorData[pixelCount * 2 + i] = data[base + 2] / 255
+    imageTensorData[i] = data[base] / 255
+    imageTensorData[pixelCount + i] = data[base + 1] / 255
+    imageTensorData[pixelCount * 2 + i] = data[base + 2] / 255
   }
 
-  const inputName = session.inputNames[0]
-  const feeds = { [inputName]: new Tensor('float32', tensorData, [1, 3, LAYOUT_INPUT_SIZE, LAYOUT_INPUT_SIZE]) }
+  const feeds = {
+    image: new Tensor('float32', imageTensorData, [1, 3, LAYOUT_INPUT_SIZE, LAYOUT_INPUT_SIZE]),
+    im_shape: new Tensor('float32', new Float32Array([LAYOUT_INPUT_SIZE, LAYOUT_INPUT_SIZE]), [1, 2]),
+    scale_factor: new Tensor(
+      'float32',
+      new Float32Array([LAYOUT_INPUT_SIZE / originalHeight, LAYOUT_INPUT_SIZE / originalWidth]),
+      [1, 2]
+    )
+  }
+
   const output = await session.run(feeds)
+  const rowsOutput = output['fetch_name_0']
+  const numRows = rowsOutput.dims[0]
 
-  // NOTE: assumes Shape B from Step 1 (separate "boxes" and "scores" outputs).
-  // If Step 1 found Shape A, replace this function body with parsing of the
-  // single combined [numBoxes, 6] output instead, keeping decodeLayout's
-  // label-filter and rescale logic.
-  const boxesOutput = output[session.outputNames[0]]
-  const scoresOutput = output[session.outputNames[1]]
-  const numBoxes = boxesOutput.dims[1]
-  const numClasses = scoresOutput.dims[2]
-
-  return decodeLayout(
-    boxesOutput.data as Float32Array,
-    scoresOutput.data as Float32Array,
-    numBoxes,
-    numClasses,
-    0.5,
-    LAYOUT_INPUT_SIZE,
-    LAYOUT_INPUT_SIZE,
-    originalWidth,
-    originalHeight
-  )
+  return decodeLayout(rowsOutput.data as Float32Array, numRows)
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/main/ocr/paddle/__tests__/layout.test.ts`
-Expected: PASS (5 tests)
+Expected: PASS (6 tests)
 
-- [ ] **Step 6: Verify `runLayout` against the real model and compare to the Python reference**
+- [ ] **Step 5: Verify `runLayout` against the real model**
 
 ```typescript
 // scratch check, not committed — run with: npx tsx <this file>
@@ -1139,13 +1130,13 @@ const main = async (): Promise<void> => {
 main()
 ```
 
-Expected: six regions, matching the ones already recorded in the spec's Investigation section (approximately): title ~(78,17)-(391,130) label `title`, ingredients ~(66,165)-(392,434) label `text`, photo ~(445,26)-(1279,654) label `image`, step 1 ~(48,472)-(423,951) label `text`, and two step-2 regions ~(440,678)-(816,950) and ~(831,682)-(1203,950), both label `text`. If `runLayout` throws on `output[session.outputNames[1]]` being undefined, Step 1 found Shape A — go back and adjust per Step 4's note.
+Expected: six regions matching the ones already recorded in the spec's Investigation section: title ~(78,18)-(391,130) label `text` (not `title` — see this task's note above), ingredients ~(66,166)-(393,434) label `text`, photo ~(445,26)-(1280,654) label `image`, step 1 ~(49,472)-(423,951) label `text`, and two step-2 regions ~(440,679)-(816,950) and ~(832,683)-(1203,950), both label `text`.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/main/ocr/paddle/layout.ts src/main/ocr/paddle/__tests__/layout.test.ts
-git commit -m "feat(ocr): add layout region detection against the ONNX DETR model"
+git commit -m "feat(ocr): add layout region detection against the ONNX layout model"
 ```
 
 ---
