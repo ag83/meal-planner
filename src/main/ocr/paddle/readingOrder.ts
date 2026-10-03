@@ -69,7 +69,13 @@ const recursiveYxCut = (boxes: IndexedBox[], res: number[], minGap: number): voi
 }
 
 export const sortReadingOrder = (boxes: ReadonlyArray<Box>): number[] => {
-  const indexed = boxes.map((box, index) => ({ box, index }))
+  // Projection intervals are integer pixel ranges; membership tests compare a
+  // box's raw origin against them, so fractional coordinates must be rounded
+  // up front or boxes whose origin rounds up fall outside their own interval.
+  const indexed = boxes.map((box, index) => ({
+    box: [Math.max(0, Math.round(box[0])), Math.max(0, Math.round(box[1])), Math.round(box[2]), Math.round(box[3])] as const,
+    index
+  }))
   const res: number[] = []
   recursiveYxCut(indexed, res, 1)
   return res

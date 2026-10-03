@@ -40,6 +40,24 @@ describe('sortReadingOrder', () => {
     expect(textOnly).toEqual(['title', 'ingredients', 'step1', 'step2a', 'step2b'])
   })
 
+  it('keeps every box when coordinates are fractional, as the layout model emits them', () => {
+    // Real runLayout output for beef-three-column, in emitted order. Rounding
+    // the projection intervals but comparing raw y0 against them used to drop
+    // every box whose y0 rounded up (e.g. 17.81 -> 18).
+    const boxes: Array<[number, number, number, number]> = [
+      [445.19, 26.18, 1279.76, 654.32], // image
+      [48.71, 472.41, 423.31, 951.36], // step1
+      [831.9, 682.51, 1203.62, 950.59], // step2b
+      [440.03, 678.67, 816.19, 950.36], // step2a
+      [66.45, 165.63, 392.61, 434.19], // ingredients
+      [78.5, 17.81, 391.26, 130.27] // title
+    ]
+    const order = sortReadingOrder(boxes)
+    expect([...order].sort()).toEqual([0, 1, 2, 3, 4, 5])
+    const textOnly = order.filter((i) => i !== 0)
+    expect(textOnly).toEqual([5, 4, 1, 3, 2])
+  })
+
   it('returns a single index unchanged for one box', () => {
     expect(sortReadingOrder([[0, 0, 10, 10]])).toEqual([0])
   })
