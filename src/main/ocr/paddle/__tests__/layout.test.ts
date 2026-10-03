@@ -24,10 +24,10 @@ describe('decodeLayout', () => {
     expect(decodeLayout(rows, 1, 0.5)[0].label).toBe('title')
   })
 
-  it('drops a row whose label is a Non-goal (e.g. table)', () => {
+  it('keeps a table region as text so its words are not lost', () => {
     const tableId = LAYOUT_LABELS.indexOf('table')
     const rows = new Float32Array(makeRow(tableId, 0.9, 10, 20, 100, 200))
-    expect(decodeLayout(rows, 1, 0.5)).toEqual([])
+    expect(decodeLayout(rows, 1, 0.5)).toEqual([{ x0: 10, y0: 20, x1: 100, y1: 200, label: 'text' }])
   })
 
   it('drops a row below the score threshold', () => {

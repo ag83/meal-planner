@@ -65,9 +65,32 @@ describe('assembleBlocks', () => {
     expect(assembleBlocks(lines, regions)).toEqual([])
   })
 
-  it('drops a line whose center falls outside every region', () => {
+  it('keeps a line outside every region in a trailing block instead of dropping it', () => {
     const regions: LayoutRegion[] = [{ x0: 0, y0: 0, x1: 100, y1: 100, label: 'text' }]
-    const lines: RecognizedLine[] = [{ box: { x0: 500, y0: 500, x1: 600, y1: 520 }, text: 'orphan', confidence: 0.9 }]
+    const lines: RecognizedLine[] = [
+      { box: { x0: 10, y0: 10, x1: 90, y1: 30 }, text: 'inside', confidence: 0.9 },
+      { box: { x0: 500, y0: 500, x1: 600, y1: 520 }, text: 'orphan', confidence: 0.9 }
+    ]
+    const blocks = assembleBlocks(lines, regions)
+    expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([['inside'], ['orphan']])
+  })
+
+  it('still returns every line, top to bottom, when the layout model finds no regions', () => {
+    const lines: RecognizedLine[] = [
+      { box: { x0: 10, y0: 40, x1: 90, y1: 60 }, text: 'second row', confidence: 0.9 },
+      { box: { x0: 300, y0: 10, x1: 380, y1: 30 }, text: 'first row right', confidence: 0.9 },
+      { box: { x0: 10, y0: 10, x1: 90, y1: 30 }, text: 'first row left', confidence: 0.9 }
+    ]
+    const blocks = assembleBlocks(lines, [])
+    expect(blocks[0].paragraphs[0].lines.map((l) => l.words.map((w) => w.text))).toEqual([
+      ['first row left', 'first row right'],
+      ['second row']
+    ])
+  })
+
+  it('drops a line lying over a photograph', () => {
+    const regions: LayoutRegion[] = [{ x0: 0, y0: 0, x1: 100, y1: 100, label: 'image' }]
+    const lines: RecognizedLine[] = [{ box: { x0: 10, y0: 10, x1: 90, y1: 30 }, text: 'label on a jar', confidence: 0.9 }]
     expect(assembleBlocks(lines, regions)).toEqual([])
   })
 })

@@ -28,11 +28,12 @@ export const LAYOUT_LABELS = [
   'reference_content'
 ] as const
 
-const LABEL_MAP: Record<string, 'text' | 'title' | 'image'> = {
-  text: 'text',
-  paragraph_title: 'title',
-  doc_title: 'title',
-  image: 'image'
+// Only photographs are excluded. Tables, captions, headers and the rest still carry words
+// the user wants searchable, and structure recognition is a non-goal, not text removal.
+const mapLabel = (label: string): LayoutRegion['label'] => {
+  if (label === 'image') return 'image'
+  if (label === 'paragraph_title' || label === 'doc_title') return 'title'
+  return 'text'
 }
 
 export interface LayoutRegion {
@@ -53,8 +54,8 @@ export const decodeLayout = (rows: Float32Array, numRows: number, threshold = 0.
     if (score < threshold) continue
 
     const rawLabel = LAYOUT_LABELS[labelId]
-    const mappedLabel = LABEL_MAP[rawLabel]
-    if (mappedLabel === undefined) continue
+    if (rawLabel === undefined) continue
+    const mappedLabel = mapLabel(rawLabel)
 
     regions.push({
       x0: rows[base + 2],
