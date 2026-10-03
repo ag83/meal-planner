@@ -67,11 +67,12 @@ describe('detectionInputSize', () => {
     expect(detectionInputSize(400, 32)).toEqual({ width: 1600, height: 128 })
   })
 
-  it('leaves an image already between 1600 and 4000 alone', () => {
+  it('leaves an image already between 1600 and 2560 alone', () => {
     expect(detectionInputSize(2400, 1600)).toEqual({ width: 2400, height: 1600 })
   })
 
-  it('scales down an image whose long side exceeds 4000', () => {
-    expect(detectionInputSize(8000, 4000)).toEqual({ width: 4000, height: 2016 })
+  it('scales down an image whose long side exceeds 2560', () => {
+    // a 12MP phone photo at 4000px pinned ~10GB of onnxruntime arena per worker
+    expect(detectionInputSize(8000, 4000)).toEqual({ width: 2560, height: 1280 })
   })
 })

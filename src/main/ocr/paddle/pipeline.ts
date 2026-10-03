@@ -25,7 +25,9 @@ export interface PipelineResult {
 }
 
 // Severity 3 = errors only: the exported graphs log a warning per unused initializer.
-const SESSION_OPTIONS = { logSeverityLevel: 3 } as const
+// The CPU arena keeps its peak allocation forever; with a new tensor shape per image that
+// grew to gigabytes per worker, so allocate per run instead.
+const SESSION_OPTIONS = { logSeverityLevel: 3, enableCpuMemArena: false, enableMemPattern: false } as const
 
 export const loadSessions = async (modelsDir: string): Promise<Sessions> => {
   const [det, rec, layout] = await Promise.all([
@@ -58,6 +60,7 @@ export const recognizeBlocks = async (sessions: Sessions, imagePath: string): Pr
 export const processImage = async (sessions: Sessions, imagePath: string): Promise<PipelineResult> => {
   const { blocks, lines } = await recognizeBlocksFrom(sessions, await prepareImage(imagePath))
   const text = joinLines(blocksToLines(blocks))
-  const confidence = lines.length === 0 ? 0 : lines.reduce((sum, r) => sum + r.confidence, 0) / lines.length
-  return { text, confidence }
+  // recipes.ocr_conf and the detail screen use a 0-100 scale
+  const mean = lines.length === 0 ? 0 : lines.reduce((sum, r) => sum + r.confidence, 0) / lines.length
+  return { text, confidence: mean * 100 }
 }

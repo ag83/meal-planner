@@ -16,11 +16,11 @@ describe('processImage', () => {
     sessions = await loadSessions(MODELS_DIR)
   }, 60000)
 
-  it('reads a real two-column recipe page into text with a 0-1 confidence', async () => {
+  it('reads a real two-column recipe page into text with a 0-100 confidence like the rest of the app stores', async () => {
     const result = await processImage(sessions, FIXTURE)
     expect(result.text).toContain('Свинина')
-    expect(result.confidence).toBeGreaterThan(0)
-    expect(result.confidence).toBeLessThanOrEqual(1)
+    expect(result.confidence).toBeGreaterThan(50)
+    expect(result.confidence).toBeLessThanOrEqual(100)
   }, 60000)
 
   describe('input classes beyond a flat RGB scan', () => {

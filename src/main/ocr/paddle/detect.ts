@@ -8,7 +8,7 @@ import { findConnectedComponents } from './connectedComponents'
 // Measured, not taken from config.json's resize_long=960: on a 1279px three-column page the
 // ~16px gutters bridged into single boxes at 960 and 1280 and separated cleanly at 1600+.
 export const DET_MIN_LONG_SIDE = 1600
-export const DET_MAX_LONG_SIDE = 4000
+export const DET_MAX_LONG_SIDE = 2560
 export const DET_MEAN: readonly [number, number, number] = [0.485, 0.456, 0.406]
 export const DET_STD: readonly [number, number, number] = [0.229, 0.224, 0.225]
 
