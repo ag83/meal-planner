@@ -1,4 +1,5 @@
-import sharp from 'sharp'
+import { rawSharp } from './image'
+import type { PreparedImage } from './image'
 import type { InferenceSession } from 'onnxruntime-node'
 import { Tensor } from 'onnxruntime-node'
 import { rgbaToChwFloat32 } from './tensor'
@@ -17,14 +18,12 @@ export const loadDictionary = (fileContents: string): string[] => {
 
 export const runRecognition = async (
   session: InferenceSession,
-  imagePath: string,
+  image: PreparedImage,
   box: DetectedBox,
   dict: readonly string[]
 ): Promise<{ text: string; confidence: number }> => {
-  const image = sharp(imagePath)
-  const metadata = await image.metadata()
-  const imageWidth = metadata.width ?? 0
-  const imageHeight = metadata.height ?? 0
+  const imageWidth = image.width
+  const imageHeight = image.height
 
   // DB's unclip expansion (detect.ts) can push a box slightly outside the
   // image bounds (e.g. a negative top near the top edge). sharp.extract()
@@ -37,7 +36,7 @@ export const runRecognition = async (
   const cropHeight = Math.max(1, bottom - top)
   const targetWidth = Math.max(1, Math.round((cropWidth / cropHeight) * RECOGNIZER_HEIGHT))
 
-  const { data } = await image
+  const { data } = await rawSharp(image)
     .extract({ left, top, width: cropWidth, height: cropHeight })
     .resize(targetWidth, RECOGNIZER_HEIGHT, { fit: 'fill' })
     .raw()

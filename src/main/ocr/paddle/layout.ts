@@ -1,4 +1,5 @@
-import sharp from 'sharp'
+import { rawSharp } from './image'
+import type { PreparedImage } from './image'
 import type { InferenceSession } from 'onnxruntime-node'
 import { Tensor } from 'onnxruntime-node'
 
@@ -67,12 +68,11 @@ export const decodeLayout = (rows: Float32Array, numRows: number, threshold = 0.
   return regions
 }
 
-export const runLayout = async (session: InferenceSession, imagePath: string): Promise<LayoutRegion[]> => {
-  const metadata = await sharp(imagePath).metadata()
-  const originalWidth = metadata.width ?? 0
-  const originalHeight = metadata.height ?? 0
+export const runLayout = async (session: InferenceSession, image: PreparedImage): Promise<LayoutRegion[]> => {
+  const originalWidth = image.width
+  const originalHeight = image.height
 
-  const { data } = await sharp(imagePath)
+  const { data } = await rawSharp(image)
     .resize(LAYOUT_INPUT_SIZE, LAYOUT_INPUT_SIZE, { fit: 'fill' })
     .raw()
     .toBuffer({ resolveWithObject: true })

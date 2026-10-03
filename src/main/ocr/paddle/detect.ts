@@ -1,4 +1,5 @@
-import sharp from 'sharp'
+import { rawSharp } from './image'
+import type { PreparedImage } from './image'
 import type { InferenceSession } from 'onnxruntime-node'
 import { Tensor } from 'onnxruntime-node'
 import { rgbaToChwFloat32 } from './tensor'
@@ -80,15 +81,13 @@ export const detectionInputSize = (width: number, height: number): { width: numb
 }
 
 export const preprocessForDetection = async (
-  imagePath: string
+  image: PreparedImage
 ): Promise<{ tensorData: Float32Array; width: number; height: number; ratioW: number; ratioH: number }> => {
-  const image = sharp(imagePath)
-  const metadata = await image.metadata()
-  const originalWidth = metadata.width ?? 0
-  const originalHeight = metadata.height ?? 0
+  const originalWidth = image.width
+  const originalHeight = image.height
   const { width: resizedWidth, height: resizedHeight } = detectionInputSize(originalWidth, originalHeight)
 
-  const { data } = await image
+  const { data } = await rawSharp(image)
     .resize(resizedWidth, resizedHeight, { fit: 'fill' })
     .raw()
     .toBuffer({ resolveWithObject: true })
@@ -104,8 +103,8 @@ export const preprocessForDetection = async (
   }
 }
 
-export const runDetection = async (session: InferenceSession, imagePath: string): Promise<DetectedBox[]> => {
-  const { tensorData, width, height, ratioW, ratioH } = await preprocessForDetection(imagePath)
+export const runDetection = async (session: InferenceSession, image: PreparedImage): Promise<DetectedBox[]> => {
+  const { tensorData, width, height, ratioW, ratioH } = await preprocessForDetection(image)
   const inputName = session.inputNames[0]
   const feeds = { [inputName]: new Tensor('float32', tensorData, [1, 3, height, width]) }
   const output = await session.run(feeds)

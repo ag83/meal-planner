@@ -7,6 +7,8 @@ import { runLayout } from './layout'
 import { assembleBlocks } from './assemble'
 import { blocksToLines } from '../blocks'
 import { joinLines } from '../postprocess'
+import { prepareImage } from './image'
+import type { PreparedImage } from './image'
 import type { RecognizedLine } from './assemble'
 import type { TessBlock } from '../blocks'
 
@@ -35,33 +37,27 @@ export const loadSessions = async (modelsDir: string): Promise<Sessions> => {
   return { det, rec, layout, dict }
 }
 
-export const recognizeLines = async (sessions: Sessions, imagePath: string): Promise<RecognizedLine[]> => {
-  const boxes = await runDetection(sessions.det, imagePath)
+const recognizeLines = async (sessions: Sessions, image: PreparedImage): Promise<RecognizedLine[]> => {
+  const boxes = await runDetection(sessions.det, image)
   const recognized: RecognizedLine[] = []
   for (const box of boxes) {
-    const { text, confidence } = await runRecognition(sessions.rec, imagePath, box, sessions.dict)
+    const { text, confidence } = await runRecognition(sessions.rec, image, box, sessions.dict)
     if (text.trim().length > 0) recognized.push({ box, text, confidence })
   }
   return recognized
 }
 
-export const recognizeBlocks = async (sessions: Sessions, imagePath: string): Promise<TessBlock[]> => {
-  const [recognized, regions] = await Promise.all([
-    recognizeLines(sessions, imagePath),
-    runLayout(sessions.layout, imagePath)
-  ])
-  return assembleBlocks(recognized, regions)
+const recognizeBlocksFrom = async (sessions: Sessions, image: PreparedImage): Promise<{ blocks: TessBlock[]; lines: RecognizedLine[] }> => {
+  const [lines, regions] = await Promise.all([recognizeLines(sessions, image), runLayout(sessions.layout, image)])
+  return { blocks: assembleBlocks(lines, regions), lines }
 }
 
+export const recognizeBlocks = async (sessions: Sessions, imagePath: string): Promise<TessBlock[]> =>
+  (await recognizeBlocksFrom(sessions, await prepareImage(imagePath))).blocks
+
 export const processImage = async (sessions: Sessions, imagePath: string): Promise<PipelineResult> => {
-  const [recognized, regions] = await Promise.all([
-    recognizeLines(sessions, imagePath),
-    runLayout(sessions.layout, imagePath)
-  ])
-
-  const text = joinLines(blocksToLines(assembleBlocks(recognized, regions)))
-  const confidence =
-    recognized.length === 0 ? 0 : recognized.reduce((sum, r) => sum + r.confidence, 0) / recognized.length
-
+  const { blocks, lines } = await recognizeBlocksFrom(sessions, await prepareImage(imagePath))
+  const text = joinLines(blocksToLines(blocks))
+  const confidence = lines.length === 0 ? 0 : lines.reduce((sum, r) => sum + r.confidence, 0) / lines.length
   return { text, confidence }
 }

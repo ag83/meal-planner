@@ -1,5 +1,8 @@
+import fs from 'fs'
+import os from 'os'
 import path from 'path'
-import { describe, it, expect, beforeAll } from 'vitest'
+import sharp from 'sharp'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { loadSessions, processImage } from '../pipeline'
 import type { Sessions } from '../pipeline'
 
@@ -19,4 +22,38 @@ describe('processImage', () => {
     expect(result.confidence).toBeGreaterThan(0)
     expect(result.confidence).toBeLessThanOrEqual(1)
   }, 60000)
+
+  describe('input classes beyond a flat RGB scan', () => {
+    let dir: string
+
+    beforeAll(() => {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-inputs-'))
+    })
+
+    afterAll(() => {
+      fs.rmSync(dir, { recursive: true, force: true })
+    })
+
+    const textFrom = async (file: string): Promise<string> => (await processImage(sessions, file)).text
+
+    it('reads an RGBA screenshot', async () => {
+      const file = path.join(dir, 'rgba.png')
+      await sharp(FIXTURE).ensureAlpha().png().toFile(file)
+      expect(await textFrom(file)).toContain('Свинина')
+    }, 60000)
+
+    it('reads a page photographed 2 degrees off level', async () => {
+      const file = path.join(dir, 'tilted.png')
+      await sharp(FIXTURE).rotate(2, { background: '#ffffff' }).png().toFile(file)
+      const text = await textFrom(file)
+      expect(text).toContain('Свинина')
+      expect(text).toContain('чеснока')
+    }, 60000)
+
+    it('reads an EXIF-rotated portrait photo', async () => {
+      const file = path.join(dir, 'exif.jpg')
+      await sharp(FIXTURE).rotate(270).jpeg({ quality: 95 }).withMetadata({ orientation: 6 }).toFile(file)
+      expect(await textFrom(file)).toContain('Свинина')
+    }, 60000)
+  })
 })
