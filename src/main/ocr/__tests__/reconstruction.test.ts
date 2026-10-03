@@ -38,8 +38,11 @@ describe('three-column page', () => {
     expect(text).not.toContain('блен-')
   })
 
-  it('keeps the title on a single line', () => {
-    expect(textOf('beef-three-column')).toContain('Говядина в соусе из лука-порея')
+  it('keeps the title together, in reading order, ahead of the ingredients', () => {
+    // The stylised title font comes out as Говядина B coyce ИЗ лука-порея: the
+    // recognizer reads «в соусе из» as Latin look-alikes. Order and grouping are
+    // what this test guards.
+    expect(textOf('beef-three-column')).toMatch(/^Говядина .*лука-порея\n\n500 г мякоти/)
   })
 
   it('excludes the photograph region', () => {

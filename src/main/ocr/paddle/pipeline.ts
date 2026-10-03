@@ -8,6 +8,7 @@ import { assembleBlocks } from './assemble'
 import { blocksToLines } from '../blocks'
 import { joinLines } from '../postprocess'
 import type { RecognizedLine } from './assemble'
+import type { TessBlock } from '../blocks'
 
 export interface Sessions {
   det: InferenceSession
@@ -34,17 +35,29 @@ export const loadSessions = async (modelsDir: string): Promise<Sessions> => {
   return { det, rec, layout, dict }
 }
 
-export const processImage = async (sessions: Sessions, imagePath: string): Promise<PipelineResult> => {
-  const [boxes, regions] = await Promise.all([
-    runDetection(sessions.det, imagePath),
-    runLayout(sessions.layout, imagePath)
-  ])
-
+export const recognizeLines = async (sessions: Sessions, imagePath: string): Promise<RecognizedLine[]> => {
+  const boxes = await runDetection(sessions.det, imagePath)
   const recognized: RecognizedLine[] = []
   for (const box of boxes) {
     const { text, confidence } = await runRecognition(sessions.rec, imagePath, box, sessions.dict)
     if (text.trim().length > 0) recognized.push({ box, text, confidence })
   }
+  return recognized
+}
+
+export const recognizeBlocks = async (sessions: Sessions, imagePath: string): Promise<TessBlock[]> => {
+  const [recognized, regions] = await Promise.all([
+    recognizeLines(sessions, imagePath),
+    runLayout(sessions.layout, imagePath)
+  ])
+  return assembleBlocks(recognized, regions)
+}
+
+export const processImage = async (sessions: Sessions, imagePath: string): Promise<PipelineResult> => {
+  const [recognized, regions] = await Promise.all([
+    recognizeLines(sessions, imagePath),
+    runLayout(sessions.layout, imagePath)
+  ])
 
   const text = joinLines(blocksToLines(assembleBlocks(recognized, regions)))
   const confidence =
