@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decodeDetection } from '../detect'
+import { decodeDetection, detectionInputSize } from '../detect'
 
 const buildProbMap = (
   width: number,
@@ -53,5 +53,25 @@ describe('decodeDetection', () => {
   it('returns an empty array when nothing is above thresh', () => {
     const map = new Float32Array(100)
     expect(decodeDetection(map, 10, 10, 1, 1, { thresh: 0.3, boxThresh: 0.6, unclipRatio: 1.5 })).toEqual([])
+  })
+})
+
+describe('detectionInputSize', () => {
+  it('upscales a typical page so its long side reaches 1600, rounded to multiples of 32', () => {
+    // At native 1280 (and at 960) the ~16px gutter between columns bridged into
+    // one wide box per text row; 1600 separated every column.
+    expect(detectionInputSize(1279, 973)).toEqual({ width: 1600, height: 1216 })
+  })
+
+  it('upscales a thin strip by the same long-side rule', () => {
+    expect(detectionInputSize(400, 32)).toEqual({ width: 1600, height: 128 })
+  })
+
+  it('leaves an image already between 1600 and 4000 alone', () => {
+    expect(detectionInputSize(2400, 1600)).toEqual({ width: 2400, height: 1600 })
+  })
+
+  it('scales down an image whose long side exceeds 4000', () => {
+    expect(detectionInputSize(8000, 4000)).toEqual({ width: 4000, height: 2016 })
   })
 })
