@@ -17,6 +17,21 @@ const boxCenter = (box: DetectedBox): { cx: number; cy: number } => ({
 const regionContains = (region: LayoutRegion, cx: number, cy: number): boolean =>
   cx >= region.x0 && cx <= region.x1 && cy >= region.y0 && cy <= region.y1
 
+// A row is every box whose vertical centre falls inside the row's first box. DB
+// splits stylised or wide-spaced lines into several boxes whose y0 differs by a few
+// pixels, so ordering by y0 alone interleaves them with the neighbouring row.
+const groupRows = (lines: RecognizedLine[]): RecognizedLine[][] => {
+  const byCenter = [...lines].sort((a, b) => boxCenter(a.box).cy - boxCenter(b.box).cy)
+  const rows: RecognizedLine[][] = []
+  for (const line of byCenter) {
+    const row = rows[rows.length - 1]
+    const { cy } = boxCenter(line.box)
+    if (row && cy >= row[0].box.y0 && cy <= row[0].box.y1) row.push(line)
+    else rows.push([line])
+  }
+  return rows.map((row) => row.sort((a, b) => a.box.x0 - b.box.x0))
+}
+
 export const assembleBlocks = (lines: RecognizedLine[], regions: LayoutRegion[]): TessBlock[] => {
   const linesByRegion: RecognizedLine[][] = regions.map(() => [])
 
@@ -33,7 +48,6 @@ export const assembleBlocks = (lines: RecognizedLine[], regions: LayoutRegion[])
     const regionLines = linesByRegion[regionIdx]
     if (regionLines.length === 0) continue
 
-    const sortedLines = [...regionLines].sort((a, b) => a.box.y0 - b.box.y0)
     blocks.push({
       paragraphs: [
         {
@@ -41,8 +55,8 @@ export const assembleBlocks = (lines: RecognizedLine[], regions: LayoutRegion[])
           // Tesseract's 0-100 confidence scale; this recognizer reports a
           // 0-1 probability, so it must be rescaled here to keep that
           // shared filter meaningful without modifying blocks.ts itself.
-          lines: sortedLines.map((line) => ({
-            words: [{ text: line.text, confidence: line.confidence * 100 }]
+          lines: groupRows(regionLines).map((row) => ({
+            words: row.map((line) => ({ text: line.text, confidence: line.confidence * 100 }))
           }))
         }
       ]

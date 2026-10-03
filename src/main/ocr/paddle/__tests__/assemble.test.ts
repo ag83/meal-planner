@@ -42,6 +42,20 @@ describe('assembleBlocks', () => {
     expect(blocks[0].paragraphs[0].lines.map((l) => l.words[0].text)).toEqual(['first', 'second'])
   })
 
+  it('joins boxes sharing a visual row left-to-right instead of ordering them by y0', () => {
+    const regions: LayoutRegion[] = [{ x0: 0, y0: 0, x1: 400, y1: 200, label: 'text' }]
+    const lines: RecognizedLine[] = [
+      { box: { x0: 10, y0: 52, x1: 150, y1: 80 }, text: 'next row', confidence: 0.9 },
+      { box: { x0: 200, y0: 10, x1: 300, y1: 38 }, text: 'right', confidence: 0.9 },
+      { box: { x0: 10, y0: 16, x1: 100, y1: 44 }, text: 'left', confidence: 0.9 }
+    ]
+    const blocks = assembleBlocks(lines, regions)
+    expect(blocks[0].paragraphs[0].lines.map((l) => l.words.map((w) => w.text))).toEqual([
+      ['left', 'right'],
+      ['next row']
+    ])
+  })
+
   it('produces no block for an image region or a region with no assigned line', () => {
     const regions: LayoutRegion[] = [
       { x0: 0, y0: 0, x1: 100, y1: 100, label: 'image' },
