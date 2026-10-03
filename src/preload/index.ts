@@ -17,7 +17,7 @@ const api: Window['api'] = {
       ipcRenderer.invoke('recipes:update', id, patch),
     setTag: (id: string, tagId: number, on: boolean) =>
       ipcRenderer.invoke('recipes:setTag', id, tagId, on),
-    reOcr: (id: string, lang?: string) => ipcRenderer.invoke('recipes:reOcr', id, lang),
+    reOcr: (id: string) => ipcRenderer.invoke('recipes:reOcr', id),
     delete: (id: string) => ipcRenderer.invoke('recipes:delete', id),
     pickFiles: () => ipcRenderer.invoke('recipes:pickFiles'),
     ingest: (paths: string[]) => ipcRenderer.invoke('recipes:ingest', paths),

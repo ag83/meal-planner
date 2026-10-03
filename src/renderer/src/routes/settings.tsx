@@ -354,13 +354,6 @@ const SettingsScreen = (): React.JSX.Element => {
     [store]
   )
 
-  const handleOcrLangChange = useCallback(
-    async (ocrLang: string) => {
-      await store.update({ ocrLang })
-    },
-    [store]
-  )
-
   const handleRetagAll = useCallback(async () => {
     setRetagging(true)
     setRetagResult(null)
@@ -467,18 +460,6 @@ const SettingsScreen = (): React.JSX.Element => {
                   <option value="system">System default</option>
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
-                </select>
-              </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <label className="text-sm text-stone-700">Default OCR language</label>
-                <select
-                  value={store.ocrLang}
-                  onChange={(e) => handleOcrLangChange(e.target.value)}
-                  className="rounded-lg border border-stone-200 px-2 py-1 text-sm focus:outline-none"
-                >
-                  <option value="rus+eng">Russian + English</option>
-                  <option value="rus">Russian only</option>
-                  <option value="eng">English only</option>
                 </select>
               </div>
             </div>

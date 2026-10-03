@@ -9,7 +9,6 @@ interface SettingsState extends Settings {
 
 export const useSettingsStore = create<SettingsState>((set) => ({
   theme: 'system',
-  ocrLang: 'rus',
   loaded: false,
 
   load: async () => {

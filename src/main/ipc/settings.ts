@@ -6,8 +6,7 @@ import { vaultManager } from '../vault/manager'
 import type { Settings, AppTheme } from '../../shared/types'
 
 const DEFAULTS: Settings = {
-  theme: 'system',
-  ocrLang: 'rus'
+  theme: 'system'
 }
 
 const configPath = (): string => {
@@ -27,8 +26,7 @@ export const registerSettingsHandlers = (): void => {
   ipcMain.handle('settings:get', async (): Promise<Settings> => {
     const config = await readRawConfig()
     return {
-      theme: (config.theme as AppTheme | undefined) ?? DEFAULTS.theme,
-      ocrLang: (config.ocrLang as string | undefined) ?? DEFAULTS.ocrLang
+      theme: (config.theme as AppTheme | undefined) ?? DEFAULTS.theme
     }
   })
 
@@ -37,7 +35,6 @@ export const registerSettingsHandlers = (): void => {
     const config = await readRawConfig()
     const p = patch as Partial<Settings>
     if (p.theme !== undefined) config.theme = p.theme
-    if (p.ocrLang !== undefined) config.ocrLang = p.ocrLang
     await fs.writeFile(configPath(), JSON.stringify(config, null, 2))
   })
 
