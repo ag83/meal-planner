@@ -7,6 +7,7 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "dist": "electron-vite build && electron-builder",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
@@ -30,7 +31,6 @@
     "onnxruntime-node": "^1.30.0",
     "react-router-dom": "^7.18.0",
     "sharp": "^0.35.1",
-    "tesseract.js": "^4.1.4",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
@@ -59,5 +59,31 @@
     "typescript-eslint": "^8.61.1",
     "vite": "^6.0.5",
     "vitest": "^2.1.8"
+  },
+  "build": {
+    "appId": "com.mealplanner.app",
+    "productName": "Meal Planner",
+    "files": [
+      "out/**"
+    ],
+    "asarUnpack": [
+      "node_modules/onnxruntime-node/**",
+      "node_modules/sharp/**",
+      "node_modules/@img/**"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/models",
+        "to": "models"
+      },
+      {
+        "from": "resources/eslav-dict.txt",
+        "to": "eslav-dict.txt"
+      },
+      {
+        "from": "resources/seed-tags.yaml",
+        "to": "seed-tags.yaml"
+      }
+    ]
   }
 }
