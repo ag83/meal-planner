@@ -33,6 +33,13 @@ describe('decodeDetection', () => {
     expect(box.y1).toBeCloseTo(7.5, 5)
   })
 
+  it('keeps by default a line whose mean probability over its box is 0.55', () => {
+    // A bulleted ingredient line scored 0.55 over its bounding box (gaps between bullets and
+    // words pull the mean down) and was silently dropped at the old 0.6 default.
+    const map = buildProbMap(10, 10, [[2, 2, 5, 5]], 0.55)
+    expect(decodeDetection(map, 10, 10, 1, 1)).toHaveLength(1)
+  })
+
   it('rejects a blob whose mean probability is below box_thresh', () => {
     const map = buildProbMap(10, 10, [[2, 2, 5, 5]], 0.4)
     const boxes = decodeDetection(map, 10, 10, 1, 1, { thresh: 0.3, boxThresh: 0.6, unclipRatio: 1.5 })

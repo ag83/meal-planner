@@ -36,7 +36,7 @@ export const decodeDetection = (
   opts: DecodeOptions = {}
 ): DetectedBox[] => {
   const thresh = opts.thresh ?? 0.3
-  const boxThresh = opts.boxThresh ?? 0.6
+  const boxThresh = opts.boxThresh ?? 0.5
   const unclipRatio = opts.unclipRatio ?? 1.5
 
   const mask = new Uint8Array(mapWidth * mapHeight)
