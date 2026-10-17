@@ -58,6 +58,90 @@ describe('sortReadingOrder', () => {
     expect(textOnly).toEqual([5, 4, 1, 3, 2])
   })
 
+
+  it('reads whole columns when a short title bridges the gutter and the row gap is thinner than the gutters', () => {
+    // Layout regions measured on a real three-column magazine page: a title centred over the
+    // left and middle columns, a photo top right, and a 5px row gap between the middle column's
+    // two blocks that is thinner than either 15-20px gutter. The text runs down each column.
+    const regions: Record<string, [number, number, number, number]> = {
+      photo: [822, 0, 1268, 452],
+      midBottom1: [426, 493, 799, 626],
+      leftBottom1: [35, 492, 408, 661],
+      ingredients: [51, 187, 370, 457],
+      midBottom2: [427, 631, 799, 729],
+      leftBottom2: [35, 666, 407, 727],
+      rightBottom: [817, 492, 1193, 731],
+      midTop2: [426, 287, 801, 487],
+      title: [212, 109, 621, 146],
+      midTop1: [426, 181, 800, 282]
+    }
+    const labels = Object.keys(regions)
+    const order = sortReadingOrder(labels.map((l) => regions[l])).map((i) => labels[i])
+    expect(order.filter((l) => l !== 'photo')).toEqual([
+      'title',
+      'ingredients',
+      'leftBottom1',
+      'leftBottom2',
+      'midTop1',
+      'midTop2',
+      'midBottom1',
+      'midBottom2',
+      'rightBottom'
+    ])
+  })
+
+  it('keeps row-major order when the gap between rows is wider than the gap between columns', () => {
+    const boxes: Array<[number, number, number, number]> = [
+      [0, 0, 100, 50],
+      [110, 0, 210, 50],
+      [0, 100, 100, 150],
+      [110, 100, 210, 150]
+    ]
+    expect(sortReadingOrder(boxes)).toEqual([0, 1, 2, 3])
+  })
+
+
+  it('reads a three-column recipe page column by column, with a promo box on the right', () => {
+    // Regions measured on a real page: centred title and byline over the columns, ingredient box
+    // and steps in the left column, the middle column split into four blocks, a promo photo
+    // bottom right.
+    const regions: Record<string, [number, number, number, number]> = {
+      mid3: [474, 1033, 848, 1125],
+      mid4: [475, 1134, 848, 1230],
+      mid5: [476, 1236, 845, 1299],
+      mid6a: [476, 1307, 850, 1472],
+      mid6b: [476, 1479, 851, 1645],
+      mid6c: [476, 1652, 852, 1725],
+      leftBottom1: [86, 1548, 457, 1645],
+      leftBottom2: [86, 1444, 457, 1541],
+      leftBottom3: [85, 1650, 457, 1724],
+      ingredients: [99, 1030, 441, 1407],
+      title: [228, 754, 1086, 861],
+      subtitle: [290, 956, 1028, 997],
+      byline: [339, 872, 998, 938],
+      right: [867, 1029, 1241, 1333],
+      promo: [864, 1339, 1301, 1725]
+    }
+    const labels = Object.keys(regions)
+    const order = sortReadingOrder(labels.map((l) => regions[l])).map((i) => labels[i])
+    expect(order.filter((l) => l !== 'promo')).toEqual([
+      'title',
+      'byline',
+      'subtitle',
+      'ingredients',
+      'leftBottom2',
+      'leftBottom1',
+      'leftBottom3',
+      'mid3',
+      'mid4',
+      'mid5',
+      'mid6a',
+      'mid6b',
+      'mid6c',
+      'right'
+    ])
+  })
+
   it('returns a single index unchanged for one box', () => {
     expect(sortReadingOrder([[0, 0, 10, 10]])).toEqual([0])
   })
