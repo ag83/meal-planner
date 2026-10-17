@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { joinLines, dehyphenate } from '../postprocess'
+import { joinLines, dehyphenate, repairLookalikes } from '../postprocess'
 
 describe('dehyphenate', () => {
   it('rejoins a word broken across lines', () => {
@@ -50,5 +50,29 @@ describe('joinLines', () => {
 
   it('returns an empty string for no lines', () => {
     expect(joinLines([])).toBe('')
+  })
+})
+
+describe('repairLookalikes', () => {
+  it('turns Latin letters inside a Cyrillic word into Cyrillic', () => {
+    expect(repairLookalikes('20 Г sveжego имбиря')).toBe('20 Г свежего имбиря')
+    expect(repairLookalikes('расtiтельного масла')).toBe('растительного масла')
+    expect(repairLookalikes('гпuбы')).toBe('гпибы')
+  })
+
+  it('repairs units glued to digits and punctuation', () => {
+    expect(repairLookalikes('2CT.Л. меда ●100 MЛ')).toBe('2СТ.Л. меда ●100 МЛ')
+  })
+
+  it('leaves words written entirely in Latin alone', () => {
+    expect(repairLookalikes('e-mail Wi-Fi presc')).toBe('e-mail Wi-Fi presc')
+  })
+
+  it('leaves Cyrillic text and digits untouched', () => {
+    expect(repairLookalikes('Свинина «Вишневая» 700 г (6%)')).toBe('Свинина «Вишневая» 700 г (6%)')
+  })
+
+  it('is applied by joinLines after de-hyphenation', () => {
+    expect(joinLines(['2 ст. л. расti-', 'тельного масла'])).toBe('2 ст. л. растительного масла')
   })
 })
