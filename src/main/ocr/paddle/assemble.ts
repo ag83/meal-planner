@@ -110,13 +110,15 @@ export const assembleBlocks = (lines: RecognizedLine[], allRegions: LayoutRegion
 
   for (const line of lines) {
     const { cx, cy } = boxCenter(line.box)
-    const overPhoto = regions.some((region) => region.label === 'image' && regionContains(region, cx, cy))
-    if (overPhoto) continue
     const regionIdx = regions.findIndex((region) => region.label !== 'image' && regionContains(region, cx, cy))
     if (regionIdx !== -1) {
       linesByRegion[regionIdx].push(line)
       continue
     }
+    // A title set over a photo sits in both an image region and its own title region, and the
+    // latter wins above; only a line that no text region claims is photo content.
+    const overPhoto = regions.some((region) => region.label === 'image' && regionContains(region, cx, cy))
+    if (overPhoto) continue
     const nearIdx = overhangRegionIndex(regions, line)
     if (nearIdx === -1) orphans.push(line)
     else linesByRegion[nearIdx].push(line)

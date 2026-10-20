@@ -128,6 +128,19 @@ describe('assembleBlocks', () => {
     ])
   })
 
+  it('keeps a title printed over a photograph when a title region claims it', () => {
+    const regions: LayoutRegion[] = [
+      { x0: 0, y0: 0, x1: 400, y1: 400, label: 'image' },
+      { x0: 20, y0: 300, x1: 300, y1: 380, label: 'title' }
+    ]
+    const lines: RecognizedLine[] = [
+      { box: { x0: 30, y0: 310, x1: 290, y1: 350 }, text: 'Свинина', confidence: 0.9 },
+      { box: { x0: 30, y0: 50, x1: 90, y1: 70 }, text: 'label on a jar', confidence: 0.9 }
+    ]
+    const blocks = assembleBlocks(lines, regions)
+    expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([['Свинина']])
+  })
+
   it('drops a line lying over a photograph', () => {
     const regions: LayoutRegion[] = [{ x0: 0, y0: 0, x1: 100, y1: 100, label: 'image' }]
     const lines: RecognizedLine[] = [{ box: { x0: 10, y0: 10, x1: 90, y1: 30 }, text: 'label on a jar', confidence: 0.9 }]
