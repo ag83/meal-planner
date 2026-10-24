@@ -140,14 +140,43 @@ const recursiveYxCut = (boxes: IndexedBox[], res: number[], minGap: number): voi
   }
 }
 
+// Layout regions stacked in one column often overlap by a few pixels. No cut separates such a
+// pair, and the fallback then reads the wider or further-left one first. Moving the shared edge
+// to the middle of the sliver, with a pixel to spare each side for the cut to see, makes them stacked, so the ordinary row cut orders them.
+const STACKED_OVERLAP_SHARE = 0.25
+const STACKED_MIN_WIDTH_SHARE = 0.5
+
+const separateStackedOverlaps = (boxes: Array<[number, number, number, number]>): void => {
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const [upper, lower] = boxes[i][1] <= boxes[j][1] ? [boxes[i], boxes[j]] : [boxes[j], boxes[i]]
+      const sharedWidth = Math.min(upper[2], lower[2]) - Math.max(upper[0], lower[0])
+      const sliver = upper[3] - lower[1]
+      const narrower = Math.min(upper[2] - upper[0], lower[2] - lower[0])
+      const shorter = Math.min(upper[3] - upper[1], lower[3] - lower[1])
+      if (sharedWidth < narrower * STACKED_MIN_WIDTH_SHARE) continue
+      if (sliver <= 0 || sliver >= shorter * STACKED_OVERLAP_SHARE || upper[3] >= lower[3]) continue
+      const middle = Math.round((upper[3] + lower[1]) / 2)
+      upper[3] = middle - 1
+      lower[1] = middle + 1
+    }
+  }
+}
+
 export const sortReadingOrder = (boxes: ReadonlyArray<Box>): number[] => {
   // Projection intervals are integer pixel ranges; membership tests compare a
   // box's raw origin against them, so fractional coordinates must be rounded
   // up front or boxes whose origin rounds up fall outside their own interval.
-  const indexed = boxes.map((box, index) => ({
-    box: [Math.max(0, Math.round(box[0])), Math.max(0, Math.round(box[1])), Math.round(box[2]), Math.round(box[3])] as const,
-    index
-  }))
+  const rounded = boxes.map(
+    (box): [number, number, number, number] => [
+      Math.max(0, Math.round(box[0])),
+      Math.max(0, Math.round(box[1])),
+      Math.round(box[2]),
+      Math.round(box[3])
+    ]
+  )
+  separateStackedOverlaps(rounded)
+  const indexed = rounded.map((box, index) => ({ box, index }))
   const res: number[] = []
   recursiveYxCut(indexed, res, 1)
   return res

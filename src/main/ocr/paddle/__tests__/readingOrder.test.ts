@@ -142,6 +142,16 @@ describe('sortReadingOrder', () => {
     ])
   })
 
+  it('orders regions that overlap each other by their top edge, not their left edge', () => {
+    // A bold ingredients region and the two-column text under it overlap by 18px in y and share
+    // columns, so neither cut applies; the wider lower region starts further left.
+    const boxes: Array<[number, number, number, number]> = [
+      [22, 238, 745, 397],
+      [56, 159, 743, 256]
+    ]
+    expect(sortReadingOrder(boxes)).toEqual([1, 0])
+  })
+
   it('returns a single index unchanged for one box', () => {
     expect(sortReadingOrder([[0, 0, 10, 10]])).toEqual([0])
   })
