@@ -27,6 +27,26 @@ interface DecodeOptions {
 
 const roundToMultipleOf32 = (value: number): number => Math.max(32, Math.round(value / 32) * 32)
 
+const sharesRow = (a: DetectedBox, b: DetectedBox): boolean => {
+  const overlap = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0)
+  return overlap > 0.5 * Math.min(a.y1 - a.y0, b.y1 - b.y0)
+}
+
+// Unclip grows each box past its text, so two boxes on one row overlap by their margins and each
+// recognition crop re-reads the other's edge letters ("одно-му" gave "порционные" and "е кусочки").
+// Each pair is cut at the middle of the gap between the text itself, never inside either's text.
+const separateRowNeighbours = (boxes: DetectedBox[], cores: DetectedBox[]): void => {
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = 0; j < boxes.length; j++) {
+      if (i === j || cores[i].x1 > cores[j].x0 || !sharesRow(boxes[i], boxes[j])) continue
+      if (boxes[i].x1 <= boxes[j].x0) continue
+      const middle = (cores[i].x1 + cores[j].x0) / 2
+      boxes[i].x1 = Math.max(cores[i].x1, Math.min(boxes[i].x1, middle))
+      boxes[j].x0 = Math.min(cores[j].x0, Math.max(boxes[j].x0, middle))
+    }
+  }
+}
+
 export const decodeDetection = (
   probMap: Float32Array,
   mapWidth: number,
@@ -46,6 +66,7 @@ export const decodeDetection = (
 
   const components = findConnectedComponents(mask, mapWidth, mapHeight)
   const boxes: DetectedBox[] = []
+  const cores: DetectedBox[] = []
 
   for (const component of components) {
     let sum = 0
@@ -63,6 +84,12 @@ export const decodeDetection = (
     const perimeter = 2 * (width + height)
     const distance = (width * height * unclipRatio) / perimeter
 
+    cores.push({
+      x0: component.minX / ratioW,
+      y0: component.minY / ratioH,
+      x1: (component.maxX + 1) / ratioW,
+      y1: (component.maxY + 1) / ratioH
+    })
     boxes.push({
       x0: (component.minX - distance) / ratioW,
       y0: (component.minY - distance) / ratioH,
@@ -71,6 +98,7 @@ export const decodeDetection = (
     })
   }
 
+  separateRowNeighbours(boxes, cores)
   return boxes
 }
 

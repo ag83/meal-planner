@@ -40,6 +40,27 @@ describe('decodeDetection', () => {
     expect(decodeDetection(map, 10, 10, 1, 1)).toHaveLength(1)
   })
 
+  it('stops neighbouring boxes on one row from overlapping, cutting at the middle of the gap', () => {
+    // Unclip grows each box past its text, so two words 2px apart overlap by the margins and
+    // each recognition crop then re-reads the other's edge letters.
+    const map = buildProbMap(16, 10, [[2, 2, 5, 5], [8, 2, 11, 5]], 0.9)
+    const boxes = decodeDetection(map, 16, 10, 1, 1, { thresh: 0.3, boxThresh: 0.6, unclipRatio: 1.5 })
+    const [left, right] = [...boxes].sort((a, b) => a.x0 - b.x0)
+    expect(left.x1).toBeCloseTo(7, 5)
+    expect(right.x0).toBeCloseTo(7, 5)
+    expect(left.x0).toBeCloseTo(0.5, 5)
+    expect(right.x1).toBeCloseTo(13.5, 5)
+  })
+
+  it('leaves boxes on different rows alone even when they share columns', () => {
+    const map = buildProbMap(10, 16, [[2, 2, 5, 5], [2, 8, 5, 11]], 0.9)
+    const boxes = decodeDetection(map, 10, 16, 1, 1, { thresh: 0.3, boxThresh: 0.6, unclipRatio: 1.5 })
+    for (const box of boxes) {
+      expect(box.x0).toBeCloseTo(0.5, 5)
+      expect(box.x1).toBeCloseTo(7.5, 5)
+    }
+  })
+
   it('rejects a blob whose mean probability is below box_thresh', () => {
     const map = buildProbMap(10, 10, [[2, 2, 5, 5]], 0.4)
     const boxes = decodeDetection(map, 10, 10, 1, 1, { thresh: 0.3, boxThresh: 0.6, unclipRatio: 1.5 })
