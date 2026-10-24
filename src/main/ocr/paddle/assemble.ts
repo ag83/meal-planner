@@ -54,6 +54,34 @@ const groupRows = (lines: RecognizedLine[]): RecognizedLine[][] => {
   return rows.map((row) => row.sort((a, b) => a.box.x0 - b.box.x0))
 }
 
+// The layout model sometimes returns two narrow text columns as one region. Row grouping would
+// then read straight across them, so a gutter running through every row splits the region. A
+// gutter must be wider than a word space, and each side must be a real column rather than a
+// narrow margin of list numbers or a single short row.
+const COLUMN_GAP_LINE_HEIGHTS = 0.6
+const MIN_COLUMN_SHARE = 0.25
+const MIN_COLUMN_ROWS = 2
+
+const splitColumns = (lines: RecognizedLine[]): RecognizedLine[][] => {
+  const heights = lines.map((line) => line.box.y1 - line.box.y0).sort((a, b) => a - b)
+  const minGap = heights[Math.floor(heights.length / 2)] * COLUMN_GAP_LINE_HEIGHTS
+  const byLeft = [...lines].sort((a, b) => a.box.x0 - b.box.x0)
+  const columns: RecognizedLine[][] = []
+  let right = -Infinity
+  for (const line of byLeft) {
+    if (columns.length === 0 || line.box.x0 - right >= minGap) columns.push([line])
+    else columns[columns.length - 1].push(line)
+    right = Math.max(right, line.box.x1)
+  }
+  const span = right - byLeft[0].box.x0
+  const widthOf = (column: RecognizedLine[]): number =>
+    Math.max(...column.map((l) => l.box.x1)) - Math.min(...column.map((l) => l.box.x0))
+  const real =
+    columns.length > 1 &&
+    columns.every((column) => widthOf(column) >= span * MIN_COLUMN_SHARE && groupRows(column).length >= MIN_COLUMN_ROWS)
+  return real ? columns : [lines]
+}
+
 const toBlock = (lines: TessLine[]): TessBlock => ({ paragraphs: [{ lines }] })
 
 // blocksToLines' DEFAULT_MIN_CONFIDENCE (blocks.ts) assumes Tesseract's 0-100 confidence
@@ -130,7 +158,9 @@ export const assembleBlocks = (lines: RecognizedLine[], allRegions: LayoutRegion
   for (const regionIdx of order) {
     const regionLines = linesByRegion[regionIdx]
     if (regionLines.length === 0) continue
-    blocks.push(toBlock(groupRows(regionLines).map((row) => ({ words: row.map(toWord) }))))
+    for (const column of splitColumns(regionLines)) {
+      blocks.push(toBlock(groupRows(column).map((row) => ({ words: row.map(toWord) }))))
+    }
   }
 
   // A line no region claims is still recipe text (a table the layout model missed, or a page

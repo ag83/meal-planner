@@ -148,6 +148,36 @@ describe('assembleBlocks', () => {
   })
 })
 
+describe('columns inside one region', () => {
+  const region: LayoutRegion[] = [{ x0: 0, y0: 0, x1: 400, y1: 200, label: 'text' }]
+  const row = (y: number, left: string, right: string): RecognizedLine[] => [
+    { box: { x0: 10, y0: y, x1: 180, y1: y + 30 }, text: left, confidence: 0.9 },
+    { box: { x0: 220, y0: y, x1: 390, y1: y + 30 }, text: right, confidence: 0.9 }
+  ]
+
+  it('reads a region holding two columns one column after the other', () => {
+    const lines = [...row(10, 'L1', 'R1'), ...row(50, 'L2', 'R2'), ...row(90, 'L3', 'R3')]
+    const blocks = assembleBlocks(lines, region)
+    expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([
+      ['L1', 'L2', 'L3'],
+      ['R1', 'R2', 'R3']
+    ])
+  })
+
+  it('keeps one block when the gap is only a word space', () => {
+    const lines: RecognizedLine[] = [10, 50, 90].flatMap((y) => [
+      { box: { x0: 10, y0: y, x1: 180, y1: y + 30 }, text: 'a', confidence: 0.9 },
+      { box: { x0: 190, y0: y, x1: 390, y1: y + 30 }, text: 'b', confidence: 0.9 }
+    ])
+    expect(assembleBlocks(lines, region)).toHaveLength(1)
+  })
+
+  it('keeps one block when only some rows have a gap', () => {
+    const lines = [...row(10, 'L1', 'R1'), { box: { x0: 10, y0: 50, x1: 390, y1: 80 }, text: 'wide', confidence: 0.9 }]
+    expect(assembleBlocks(lines, region)).toHaveLength(1)
+  })
+})
+
 describe('splitBoxesAtRegions', () => {
   const columns: LayoutRegion[] = [
     { x0: 0, y0: 0, x1: 100, y1: 200, label: 'text' },
