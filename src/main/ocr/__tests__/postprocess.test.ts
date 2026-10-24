@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { joinLines, dehyphenate, repairLookalikes } from '../postprocess'
+import { joinLines, dehyphenate, repairLookalikes, repairCase, repairDashes } from '../postprocess'
 
 describe('dehyphenate', () => {
   it('rejoins a word broken across lines', () => {
@@ -64,8 +64,17 @@ describe('repairLookalikes', () => {
     expect(repairLookalikes('2CT.Л. меда ●100 MЛ')).toBe('2СТ.Л. меда ●100 МЛ')
   })
 
-  it('leaves words written entirely in Latin alone', () => {
-    expect(repairLookalikes('e-mail Wi-Fi presc')).toBe('e-mail Wi-Fi presc')
+  it('leaves Latin words that contain a letter with no Cyrillic twin alone', () => {
+    expect(repairLookalikes('e-mail Wi-Fi')).toBe('e-mail Wi-Fi')
+  })
+
+  it('repairs a whole word or single letter in Latin whose every letter has a twin', () => {
+    expect(repairLookalikes('70 coyca барбекю')).toBe('70 соуса барбекю')
+    expect(repairLookalikes('Сложить B миску')).toBe('Сложить В миску')
+  })
+
+  it('reads a caret as the л the display font draws', () => {
+    expect(repairLookalikes('20 M^ масла')).toBe('20 Мл масла')
   })
 
   it('leaves Cyrillic text and digits untouched', () => {
@@ -74,5 +83,25 @@ describe('repairLookalikes', () => {
 
   it('is applied by joinLines after de-hyphenation', () => {
     expect(joinLines(['2 ст. л. расti-', 'тельного масла'])).toBe('2 ст. л. растительного масла')
+  })
+})
+
+describe('repairCase', () => {
+  it('lowercases capitals that follow a lowercase letter inside a word', () => {
+    expect(repairCase('2 луКовицы, 45-60 миН, 15-20 мИн сВИНИНЫ')).toBe('2 луковицы, 45-60 мин, 15-20 мин свинины')
+  })
+
+  it('keeps a leading capital and all-caps words', () => {
+    expect(repairCase('Ребра КГ СВИНЫХ МяКОТИ')).toBe('Ребра КГ СВИНЫХ Мякоти')
+  })
+})
+
+describe('repairDashes', () => {
+  it('turns a run of underscores into a dash', () => {
+    expect(repairDashes('сверху __ подготовленные ребра')).toBe('сверху — подготовленные ребра')
+  })
+
+  it('leaves a single underscore alone', () => {
+    expect(repairDashes('a_b')).toBe('a_b')
   })
 })
