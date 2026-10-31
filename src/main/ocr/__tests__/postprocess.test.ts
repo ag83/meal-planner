@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { joinLines, dehyphenate, repairLookalikes, repairCase, repairDashes } from '../postprocess'
+import {
+  joinLines,
+  dehyphenate,
+  repairLookalikes,
+  repairCase,
+  repairDashes,
+  repairStrayCapitals
+} from '../postprocess'
 
 describe('dehyphenate', () => {
   it('rejoins a word broken across lines', () => {
@@ -38,6 +45,20 @@ describe('joinLines', () => {
 
   it('rejoins hyphenated breaks across the line boundary', () => {
     expect(joinLines(['нарежьте ин-', 'дейку кубиками'])).toBe('нарежьте индейку кубиками')
+  })
+
+  it('rejoins a word hyphenated across a column break, dropping the hyphen', () => {
+    expect(joinLines(['Добавьте мел-', '', 'ко нарезанные перцы'])).toBe('Добавьте мелко нарезанные перцы')
+  })
+
+  it('keeps the paragraph break when the next block starts a new sentence', () => {
+    expect(joinLines(['абзац один-', '', 'Абзац два'])).toBe('абзац один-\n\nАбзац два')
+  })
+
+  it('keeps the break after a spaced dash that ends a block', () => {
+    expect(joinLines(['перец черный молотый -', '', 'соль - по вкусу'])).toBe(
+      'перец черный молотый -\n\nсоль - по вкусу'
+    )
   })
 
   it('collapses runs of blank lines into one paragraph break', () => {
@@ -83,6 +104,43 @@ describe('repairLookalikes', () => {
 
   it('is applied by joinLines after de-hyphenation', () => {
     expect(joinLines(['2 ст. л. расti-', 'тельного масла'])).toBe('2 ст. л. растительного масла')
+  })
+})
+
+describe('repairLookalikes with l', () => {
+  it('reads a Latin l inside a Cyrillic word as л', () => {
+    expect(repairLookalikes('Добавьте меl-')).toBe('Добавьте мел-')
+  })
+
+  it('leaves a wholly Latin token containing l alone', () => {
+    expect(repairLookalikes('mail@all.ru')).toBe('mail@all.ru')
+    expect(repairLookalikes('all')).toBe('all')
+  })
+})
+
+describe('repairStrayCapitals', () => {
+  it('lowercases a one-letter word capitalised in the middle of a sentence', () => {
+    expect(repairStrayCapitals('лук С морковкой, добавьте. Залейте томатами И пастой')).toBe(
+      'лук с морковкой, добавьте. Залейте томатами и пастой'
+    )
+  })
+
+  it('keeps initials and a letter that starts a sentence', () => {
+    expect(repairStrayCapitals('густым. И. С. Митянина. В казане на 5 л')).toBe('густым. И. С. Митянина. В казане на 5 л')
+  })
+
+  it('lowercases a time or weight unit printed in capitals after a number', () => {
+    expect(repairStrayCapitals('тушите 2-3 МИН. Добавьте, 10 МИН, 500 Г муки')).toBe(
+      'тушите 2-3 мин. Добавьте, 10 мин, 500 г муки'
+    )
+  })
+
+  it('keeps a capitalised word that is not a unit', () => {
+    expect(repairStrayCapitals('2 ГОСТ СВЧ')).toBe('2 ГОСТ СВЧ')
+  })
+
+  it('is applied by joinLines', () => {
+    expect(joinLines(['обжарьте лук C морковкой', 'и пастой, 2-3 МИН.'])).toBe('обжарьте лук с морковкой и пастой, 2-3 мин.')
   })
 })
 

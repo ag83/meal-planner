@@ -15,6 +15,10 @@ const LATIN_TO_CYRILLIC: Readonly<Record<string, string>> = {
   '^': 'л'
 }
 
+// Latin l has no look-alike among Cyrillic capitals, but inside a Cyrillic word it is the
+// rounded foot of л (меl-). A wholly Latin token with an l is left alone.
+const LATIN_IN_CYRILLIC_ONLY: Readonly<Record<string, string>> = { l: 'л' }
+
 const LATIN_OR_CARET = /[A-Za-z^]/g
 
 const repairToken = (token: string): string => {
@@ -24,7 +28,10 @@ const repairToken = (token: string): string => {
   const hasLatin = marks.some((ch) => ch !== '^')
   if (!hasLatin) return token
   if (!hasCyrillic && !marks.every((ch) => ch in LATIN_TO_CYRILLIC)) return token
-  return token.replace(LATIN_OR_CARET, (ch) => LATIN_TO_CYRILLIC[ch] ?? ch)
+  return token.replace(
+    LATIN_OR_CARET,
+    (ch) => LATIN_TO_CYRILLIC[ch] ?? (hasCyrillic ? LATIN_IN_CYRILLIC_ONLY[ch] : undefined) ?? ch
+  )
 }
 
 export const repairLookalikes = (text: string): string => text.replace(/\S+/gu, repairToken)
@@ -39,7 +46,26 @@ export const repairCase = (text: string): string =>
 
 export const repairDashes = (text: string): string => text.replace(/_{2,}/g, '—')
 
-const repairText = (text: string): string => repairDashes(repairCase(repairLookalikes(text)))
+// A bold face reads small words as capitals too: С, И in the middle of a sentence and МИН after
+// a number. A one-letter capital counts only after a lowercase word or a comma and before a
+// lowercase word, which spares initials (И. С. Митянина) and a sentence-opening В.
+const STRAY_LETTER = /(?<=[\p{Ll},;] )[АВИКОСУЯ](?= \p{Ll})/gu
+const CAPITAL_UNIT = /(?<=\d\s?)(?:МИН|ЧАС|ШТ|КГ|МЛ|Г|Л)(?!\p{L})/gu
+
+export const repairStrayCapitals = (text: string): string =>
+  text.replace(STRAY_LETTER, (ch) => ch.toLowerCase()).replace(CAPITAL_UNIT, (unit) => unit.toLowerCase())
+
+const repairText = (text: string): string => repairStrayCapitals(repairDashes(repairCase(repairLookalikes(text))))
+
+// A word broken at the foot of one column carries on at the top of the next block, which the
+// layout makes a paragraph of its own. Same test as HYPHEN_BREAK: letter, hyphen, lowercase.
+const mergeSplitWords = (paragraphs: string[][]): string[][] =>
+  paragraphs.reduce<string[][]>((merged, paragraph) => {
+    const last = merged[merged.length - 1]
+    if (last && /\p{L}-$/u.test(last[last.length - 1]) && /^\p{Ll}/u.test(paragraph[0])) last.push(...paragraph)
+    else merged.push([...paragraph])
+    return merged
+  }, [])
 
 export const joinLines = (lines: string[]): string => {
   const paragraphs: string[][] = [[]]
@@ -51,8 +77,7 @@ export const joinLines = (lines: string[]): string => {
     }
   }
 
-  return paragraphs
-    .filter((p) => p.length > 0)
+  return mergeSplitWords(paragraphs.filter((p) => p.length > 0))
     .map((p) => repairText(dehyphenate(p.join('\n')).replace(/\n/g, ' ')))
     .join('\n\n')
     .trim()
