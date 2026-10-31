@@ -152,7 +152,12 @@ export const assembleBlocks = (lines: RecognizedLine[], allRegions: LayoutRegion
     else linesByRegion[nearIdx].push(line)
   }
 
-  const order = sortReadingOrder(regions.map((r) => [r.x0, r.y0, r.x1, r.y1] as const))
+  // A photo spanning both columns covers their gutter, so it would hide the columns from the
+  // ordering; it never holds a line, so nothing is lost by leaving it out.
+  const textIdx = regions.flatMap((region, idx) => (region.label === 'image' ? [] : [idx]))
+  const order = sortReadingOrder(textIdx.map((idx) => [regions[idx].x0, regions[idx].y0, regions[idx].x1, regions[idx].y1] as const)).map(
+    (i) => textIdx[i]
+  )
 
   const blocks: TessBlock[] = []
   for (const regionIdx of order) {

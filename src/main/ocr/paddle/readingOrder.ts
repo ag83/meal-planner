@@ -72,6 +72,34 @@ const largestGap = (intervals: Array<[number, number]>): number =>
 
 const centerY = (b: IndexedBox): number => (b.box[1] + b.box[3]) / 2
 
+// A gap taller than the gutter (a caption far under the page body) must not turn the whole page
+// into a row-by-row read: the first row would then span both columns and read across them. Only
+// the bands that gap separates are ordered top to bottom; inside each band the gaps are smaller
+// than the gutter, so it is free to read column by column. False when no gap is that tall.
+const cutBandsFirst = (
+  boxes: IndexedBox[],
+  yIntervals: Array<[number, number]>,
+  widestGutter: number,
+  res: number[],
+  minGap: number
+): boolean => {
+  const bands: Array<[number, number]> = []
+  for (const [start, end] of yIntervals) {
+    const last = bands[bands.length - 1]
+    if (last && start - last[1] < widestGutter) last[1] = end
+    else bands.push([start, end])
+  }
+  if (bands.length < 2) return false
+  for (const [start, end] of bands) {
+    recursiveYxCut(
+      boxes.filter((b) => b.box[1] >= start && b.box[1] < end),
+      res,
+      minGap
+    )
+  }
+  return true
+}
+
 // Reads the page column by column when its gutters are wider than the gaps between rows.
 // Boxes that cross a gutter (a centred title) are emitted in y order between the column groups.
 // Returns false, having emitted nothing, when the page is not laid out that way.
@@ -80,7 +108,7 @@ const cutColumnsFirst = (boxes: IndexedBox[], res: number[], minGap: number): bo
   if (gutters.length === 0) return false
   const yIntervals = splitProjectionProfile(projectionByBoxes(boxes.map((b) => b.box), 1), 1)
   const widestGutter = Math.max(...gutters.map(([start, end]) => end - start))
-  if (widestGutter <= largestGap(yIntervals)) return false
+  if (widestGutter <= largestGap(yIntervals)) return cutBandsFirst(boxes, yIntervals, widestGutter, res, minGap)
 
   const bridging = boxes
     .filter((b) => gutters.some(([start, end]) => b.box[0] < start && b.box[2] > end))

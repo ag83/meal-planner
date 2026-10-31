@@ -6,7 +6,7 @@ import { loadSessions, recognizeBlocks } from '../paddle/pipeline'
 const FIXTURES = path.join(process.cwd(), 'src/main/ocr/__tests__/fixtures')
 const MODELS_DIR = path.join(process.cwd(), 'resources/models')
 
-const PAGES = ['beef-three-column', 'pork-two-column']
+const PAGES = ['beef-three-column', 'pork-two-column', 'mexican-soup-boxed']
 
 describe('record OCR fixtures', () => {
   it('regenerates block fixtures from the committed source images', async () => {

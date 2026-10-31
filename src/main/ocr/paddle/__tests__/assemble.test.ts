@@ -141,6 +141,24 @@ describe('assembleBlocks', () => {
     expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([['Свинина']])
   })
 
+  it('reads two columns in order when a photograph spans both under them', () => {
+    const regions: LayoutRegion[] = [
+      { x0: 0, y0: 0, x1: 200, y1: 20, label: 'title' },
+      { x0: 230, y0: 2, x1: 430, y1: 25, label: 'text' },
+      { x0: 0, y0: 28, x1: 200, y1: 300, label: 'text' },
+      { x0: 230, y0: 28, x1: 430, y1: 300, label: 'text' },
+      { x0: 0, y0: 600, x1: 430, y1: 1000, label: 'image' }
+    ]
+    const line = (x0: number, y0: number, text: string): RecognizedLine => ({
+      box: { x0, y0, x1: x0 + 150, y1: y0 + 15 },
+      text,
+      confidence: 0.9
+    })
+    const lines = [line(230, 5, 'right top'), line(5, 3, 'title'), line(5, 40, 'left body'), line(235, 40, 'right body')]
+    const blocks = assembleBlocks(lines, regions)
+    expect(blocks.map((b) => b.paragraphs[0].lines[0].words[0].text)).toEqual(['title', 'left body', 'right top', 'right body'])
+  })
+
   it('drops a line lying over a photograph', () => {
     const regions: LayoutRegion[] = [{ x0: 0, y0: 0, x1: 100, y1: 100, label: 'image' }]
     const lines: RecognizedLine[] = [{ box: { x0: 10, y0: 10, x1: 90, y1: 30 }, text: 'label on a jar', confidence: 0.9 }]

@@ -142,6 +142,29 @@ describe('sortReadingOrder', () => {
     ])
   })
 
+  it('reads a boxed recipe column by column when a caption sits far below the page body', () => {
+    // A title and the right column's first paragraph share a 3px-tall top band, and a badge over
+    // the photo sits 400px under the text. That gap outweighs the gutter, but must not make the
+    // top band read straight across both columns.
+    const regions: Record<string, [number, number, number, number]> = {
+      title: [45, 28, 510, 82],
+      rightTop: [593, 32, 1111, 105],
+      ingredients: [68, 107, 507, 753],
+      method: [46, 768, 565, 966],
+      rightBody: [593, 112, 1115, 345],
+      byline: [717, 351, 1114, 429],
+      chefHeading: [649, 453, 988, 495],
+      chefNote: [660, 515, 1120, 757],
+      dietHeading: [735, 806, 1012, 882],
+      dietBody: [620, 917, 1118, 1112],
+      badge: [95, 1512, 303, 1618]
+    }
+    const labels = Object.keys(regions)
+    const order = sortReadingOrder(labels.map((l) => regions[l])).map((i) => labels[i])
+    expect(order.slice(0, 4)).toEqual(['title', 'ingredients', 'method', 'rightTop'])
+    expect(order.indexOf('dietHeading')).toBeLessThan(order.indexOf('dietBody'))
+  })
+
   it('orders regions that overlap each other by their top edge, not their left edge', () => {
     // A bold ingredients region and the two-column text under it overlap by 18px in y and share
     // columns, so neither cut applies; the wider lower region starts further left.
