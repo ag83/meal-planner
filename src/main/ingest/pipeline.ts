@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import type Database from 'better-sqlite3'
 import { hashFile } from '../services/hasher'
 import { makeThumbnail } from '../services/thumbnailer'
-import { runOcr } from '../ocr/worker'
+import { runOcr, OCR_LANG } from '../ocr/worker'
 import { extractTags } from '../tags/matcher'
 import type { IngestProgress } from '../../shared/types'
 
@@ -80,7 +80,7 @@ export const ingestFile = async (
     const result = await runOcr(destPath)
     ocrText = result.text
     ocrConf = result.confidence
-    ocrLang = result.lang
+    ocrLang = OCR_LANG
   } catch (err) {
     // OCR failure is non-fatal — recipe is still saved without text
     console.warn(`[ingest] OCR failed for ${id}:`, err)

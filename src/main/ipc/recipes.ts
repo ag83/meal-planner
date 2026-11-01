@@ -4,7 +4,7 @@ import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { getDb } from '../db/connection'
 import { vaultManager } from '../vault/manager'
 import { ingestFile } from '../ingest/pipeline'
-import { runOcr } from '../ocr/worker'
+import { runOcr, OCR_LANG } from '../ocr/worker'
 import { extractTags } from '../tags/matcher'
 import type { IngestProgress } from '../../shared/types'
 
@@ -134,9 +134,8 @@ export const registerRecipeHandlers = (): void => {
     }
   })
 
-  ipcMain.handle('recipes:reOcr', async (_event, id: unknown, lang: unknown) => {
+  ipcMain.handle('recipes:reOcr', async (_event, id: unknown) => {
     if (typeof id !== 'string') throw new Error('Invalid id')
-    const requestedLang = typeof lang === 'string' && lang.trim() ? lang : undefined
     const vault = vaultManager.getCurrent()
     if (!vault) throw new Error('No vault open')
     const db = getDb()
@@ -146,13 +145,13 @@ export const registerRecipeHandlers = (): void => {
     if (!recipe) throw new Error('Recipe not found')
 
     const imagePath = path.join(vault.path, 'pictures', `${id}.${recipe.ext}`)
-    const { text, confidence, lang: ocrLang } = await runOcr(imagePath, requestedLang)
+    const { text, confidence } = await runOcr(imagePath)
     const matches = extractTags(db, text)
 
     db.transaction(() => {
       db.prepare('UPDATE recipes SET ocr_text=?,ocr_lang=?,ocr_conf=?,updated_at=? WHERE id=?').run(
         text,
-        ocrLang,
+        OCR_LANG,
         confidence,
         Date.now(),
         id

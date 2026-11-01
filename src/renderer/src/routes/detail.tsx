@@ -44,7 +44,6 @@ const Detail = (): React.JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
-  const [reOcrLang, setReOcrLang] = useState('rus')
   const [reOcring, setReOcring] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -95,13 +94,13 @@ const Detail = (): React.JSX.Element => {
     if (!recipe) return
     setReOcring(true)
     try {
-      await recipes.reOcr(recipe.id, reOcrLang)
+      await recipes.reOcr(recipe.id)
       const updated = await recipes.get(recipe.id)
       if (updated) setRecipe(updated)
     } finally {
       setReOcring(false)
     }
-  }, [recipe, reOcrLang])
+  }, [recipe])
 
   const handleDelete = useCallback(async () => {
     if (!recipe || deleting) return
@@ -245,15 +244,6 @@ const Detail = (): React.JSX.Element => {
                 Re-run OCR
               </label>
               <div className="flex gap-2">
-                <select
-                  value={reOcrLang}
-                  onChange={(e) => setReOcrLang(e.target.value)}
-                  className="flex-1 rounded-lg border border-stone-200 px-2 py-1.5 text-xs text-stone-600 focus:outline-none"
-                >
-                  <option value="rus+eng">Russian + English</option>
-                  <option value="rus">Russian only</option>
-                  <option value="eng">English only</option>
-                </select>
                 <button
                   onClick={handleReOcr}
                   disabled={reOcring}
