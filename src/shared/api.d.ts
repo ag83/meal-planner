@@ -26,7 +26,7 @@ declare global {
         get(id: string): Promise<RecipeFull | null>
         update(id: string, patch: { title?: string | null; notes?: string | null }): Promise<void>
         setTag(id: string, tagId: number, on: boolean): Promise<void>
-        reOcr(id: string, lang?: string): Promise<void>
+        reOcr(id: string): Promise<void>
         delete(id: string): Promise<void>
         pickFiles(): Promise<string[]>
         ingest(paths: string[]): Promise<void>

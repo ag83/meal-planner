@@ -10,6 +10,14 @@ export default defineConfig({
         '@shared': resolve('src/shared')
       }
     },
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve('src/main/index.ts'),
+          ocrWorkerThread: resolve('src/main/ocr/paddle/ocrWorkerThread.ts')
+        }
+      }
+    },
     plugins: [externalizeDepsPlugin()]
   },
   preload: {

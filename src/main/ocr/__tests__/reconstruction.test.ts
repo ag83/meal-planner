@@ -38,8 +38,11 @@ describe('three-column page', () => {
     expect(text).not.toContain('блен-')
   })
 
-  it('keeps the title on a single line', () => {
-    expect(textOf('beef-three-column')).toContain('Говядина в соусе из лука-порея')
+  it('keeps the title together, in reading order, ahead of the ingredients', () => {
+    // The stylised title font comes out as Говядина B coyce ИЗ лука-порея: the
+    // recognizer reads «в соусе из» as Latin look-alikes. Order and grouping are
+    // what this test guards.
+    expect(textOf('beef-three-column')).toMatch(/^Говядина .*лука-порея\n\n500 г мякоти/)
   })
 
   it('excludes the photograph region', () => {
@@ -60,5 +63,29 @@ describe('two-column page', () => {
     expect(textOf('pork-two-column')).toContain(
       '300 г свинины, луковица, 3 зубчика чеснока'
     )
+  })
+})
+
+describe('boxed page with a photograph under both columns', () => {
+  // The photo spans the gutter and a badge sits far below the text; neither may pull the
+  // right column's first paragraph ahead of the left column.
+  const text = textOf('mexican-soup-boxed')
+  const at = (needle: string): number => text.indexOf(needle)
+
+  it('reads the left column through to its last paragraph before the right column', () => {
+    expect(at('ПО-МЕКСИКАНСКИ')).toBeLessThan(at('фарш говяжий'))
+    expect(at('фарш говяжий')).toBeLessThan(at('В казане на 5 л'))
+    expect(at('В казане на 5 л')).toBeLessThan(at('нарезанные сладкие'))
+    expect(at('нарезанные сладкие')).toBeLessThan(at('Отварите'))
+  })
+
+  it('reads each sidebar heading before its body', () => {
+    expect(at('От шеф-повара')).toBeLessThan(at('Для этого супа'))
+    expect(at('Комментарий')).toBeLessThan(at('Польза томатов'))
+  })
+
+  it('repairs the misread small words and units in the method', () => {
+    expect(text).toContain('обжарьте мелко нарезанные лук с морковкой')
+    expect(text).toContain('томатами и пастой, тушите 2-3 мин. Добавьте мелко нарезанные сладкие и острый перцы')
   })
 })

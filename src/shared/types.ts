@@ -17,7 +17,6 @@ export type AppTheme = 'system' | 'light' | 'dark'
 export interface AppConfig {
   vaultPath: string | null
   theme?: AppTheme
-  ocrLang?: string
 }
 
 export type IngestStatus = 'hashing' | 'duplicate' | 'copying' | 'thumbnail' | 'ocr' | 'tagging' | 'done' | 'error'
@@ -92,5 +91,4 @@ export interface TagWithAliases {
 
 export interface Settings {
   theme: AppTheme
-  ocrLang: string
 }

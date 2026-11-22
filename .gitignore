@@ -3,5 +3,6 @@ dist
 out
 .DS_Store
 *.local
+.worktrees
 # npm run ocr:record downloads these into cwd (no cachePath, unlike worker.ts's pool)
 *.traineddata

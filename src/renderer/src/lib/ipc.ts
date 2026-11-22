@@ -26,7 +26,7 @@ export const recipes = {
     window.api.recipes.update(id, patch),
   setTag: (id: string, tagId: number, on: boolean): Promise<void> =>
     window.api.recipes.setTag(id, tagId, on),
-  reOcr: (id: string, lang?: string): Promise<void> => window.api.recipes.reOcr(id, lang),
+  reOcr: (id: string): Promise<void> => window.api.recipes.reOcr(id),
   delete: (id: string): Promise<void> => window.api.recipes.delete(id),
   pickFiles: (): Promise<string[]> => window.api.recipes.pickFiles(),
   ingest: (paths: string[]): Promise<void> => window.api.recipes.ingest(paths),
