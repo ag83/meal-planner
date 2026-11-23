@@ -15,7 +15,6 @@ The renderer never touches `fs`, `path`, sqlite, or `child_process`. All side ef
 ## Conventions
 
 - **TypeScript everywhere**; no `.js` in `src/`.
-- **Named arrow functions, not `function` declarations**: `const foo = (x: T): R => { ... }`, including default-exported components (`const Foo = (): React.JSX.Element => {...}; export default Foo`). No `function`/`async function` declarations or anonymous `function` expressions anywhere in `src/`.
 - **IPC is the only main↔renderer channel**. Add new handlers in `src/main/ipc/<domain>.ts` and mirror the type in `src/preload/api.d.ts`. Renderer imports the typed `window.api` only.
 - **Electron security non-negotiables**: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true` for the renderer, CSP header set in the main window. Never relax these without a written justification.
 - **DB writes go through prepared statements**, wrapped in a transaction when touching > 1 row.
@@ -41,7 +40,7 @@ Use the `caveman` skill (default `full` intensity) for all conversational replie
 - **Type** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 - **Scope** — optional, the area touched. This repo's usual scopes: `ocr`, `tags`, `db`, `ipc`, `vault`, `ui`, `seed`.
 - **Subject** — imperative mood, lower case, no trailing period, ≤ 72 chars.
-- **Body** — the *why*, not the what. Wrap at 72 columns.
+- **Body** — the _why_, not the what. Wrap at 72 columns.
 - **Breaking changes** — append `!` after the type/scope and add a `BREAKING CHANGE:` footer. A `schemaVersion` bump is always breaking.
 
 ```
