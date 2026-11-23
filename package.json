@@ -19,7 +19,8 @@
     "pretest": "npm rebuild better-sqlite3",
     "posttest": "electron-rebuild -f -w better-sqlite3,sharp",
     "rebuild:electron": "electron-rebuild -f -w better-sqlite3,sharp",
-    "clear-data": "node scripts/clear-data.mjs"
+    "clear-data": "node scripts/clear-data.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^3.0.0",
@@ -51,6 +52,8 @@
     "eslint": "^9.17.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.4.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -84,6 +87,15 @@
         "from": "resources/seed-tags.yaml",
         "to": "seed-tags.yaml"
       }
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{json,css,md,yaml,yml,html}": [
+      "prettier --write"
     ]
   }
 }
