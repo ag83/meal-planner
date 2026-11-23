@@ -1,14 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { runMigrations } from '../../db/migrations'
 
 let db: Database.Database
 
 // Mirrors the AND/OR queries in src/main/ipc/recipes.ts
-const filterByTags = (
-  ids: number[],
-  mode: 'and' | 'or'
-): { id: string; tagCount: number }[] => {
+const filterByTags = (ids: number[], mode: 'and' | 'or'): { id: string; tagCount: number }[] => {
   if (ids.length === 0) return []
   const ph = ids.map(() => '?').join(',')
   if (mode === 'and') {
@@ -44,7 +42,11 @@ const insertTag = (slug: string): number => {
   db.prepare(
     "INSERT INTO tags (slug,label,kind,source,created_at) VALUES (?,?,'ingredient','builtin',?)"
   ).run(slug, slug, Date.now())
-  return (db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get(slug) as { id: number }).id
+  return (
+    db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get(slug) as {
+      id: number
+    }
+  ).id
 }
 
 const insertRecipe = (id: string, missing = 0): void => {

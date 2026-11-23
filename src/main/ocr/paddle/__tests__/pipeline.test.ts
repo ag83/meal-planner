@@ -2,12 +2,16 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import sharp from 'sharp'
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { loadSessions, processImage } from '../pipeline'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+
 import type { Sessions } from '../pipeline'
+import { loadSessions, processImage } from '../pipeline'
 
 const MODELS_DIR = path.join(process.cwd(), 'resources/models')
-const FIXTURE = path.join(process.cwd(), 'src/main/ocr/__tests__/fixtures/images/pork-two-column.png')
+const FIXTURE = path.join(
+  process.cwd(),
+  'src/main/ocr/__tests__/fixtures/images/pork-two-column.png'
+)
 
 describe('processImage', () => {
   let sessions: Sessions
@@ -34,7 +38,8 @@ describe('processImage', () => {
       fs.rmSync(dir, { recursive: true, force: true })
     })
 
-    const textFrom = async (file: string): Promise<string> => (await processImage(sessions, file)).text
+    const textFrom = async (file: string): Promise<string> =>
+      (await processImage(sessions, file)).text
 
     it('reads an RGBA screenshot', async () => {
       const file = path.join(dir, 'rgba.png')
@@ -52,7 +57,11 @@ describe('processImage', () => {
 
     it('reads an EXIF-rotated portrait photo', async () => {
       const file = path.join(dir, 'exif.jpg')
-      await sharp(FIXTURE).rotate(270).jpeg({ quality: 95 }).withMetadata({ orientation: 6 }).toFile(file)
+      await sharp(FIXTURE)
+        .rotate(270)
+        .jpeg({ quality: 95 })
+        .withMetadata({ orientation: 6 })
+        .toFile(file)
       expect(await textFrom(file)).toContain('Свинина')
     }, 60000)
   })

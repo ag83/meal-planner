@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+
 import {
-  joinLines,
   dehyphenate,
-  repairLookalikes,
+  joinLines,
   repairCase,
   repairDashes,
+  repairLookalikes,
   repairStrayCapitals
 } from '../postprocess'
 
@@ -48,7 +49,9 @@ describe('joinLines', () => {
   })
 
   it('rejoins a word hyphenated across a column break, dropping the hyphen', () => {
-    expect(joinLines(['Добавьте мел-', '', 'ко нарезанные перцы'])).toBe('Добавьте мелко нарезанные перцы')
+    expect(joinLines(['Добавьте мел-', '', 'ко нарезанные перцы'])).toBe(
+      'Добавьте мелко нарезанные перцы'
+    )
   })
 
   it('keeps the paragraph break when the next block starts a new sentence', () => {
@@ -126,7 +129,9 @@ describe('repairStrayCapitals', () => {
   })
 
   it('keeps initials and a letter that starts a sentence', () => {
-    expect(repairStrayCapitals('густым. И. С. Митянина. В казане на 5 л')).toBe('густым. И. С. Митянина. В казане на 5 л')
+    expect(repairStrayCapitals('густым. И. С. Митянина. В казане на 5 л')).toBe(
+      'густым. И. С. Митянина. В казане на 5 л'
+    )
   })
 
   it('lowercases a time or weight unit printed in capitals after a number', () => {
@@ -140,13 +145,17 @@ describe('repairStrayCapitals', () => {
   })
 
   it('is applied by joinLines', () => {
-    expect(joinLines(['обжарьте лук C морковкой', 'и пастой, 2-3 МИН.'])).toBe('обжарьте лук с морковкой и пастой, 2-3 мин.')
+    expect(joinLines(['обжарьте лук C морковкой', 'и пастой, 2-3 МИН.'])).toBe(
+      'обжарьте лук с морковкой и пастой, 2-3 мин.'
+    )
   })
 })
 
 describe('repairCase', () => {
   it('lowercases capitals that follow a lowercase letter inside a word', () => {
-    expect(repairCase('2 луКовицы, 45-60 миН, 15-20 мИн сВИНИНЫ')).toBe('2 луковицы, 45-60 мин, 15-20 мин свинины')
+    expect(repairCase('2 луКовицы, 45-60 миН, 15-20 мИн сВИНИНЫ')).toBe(
+      '2 луковицы, 45-60 мин, 15-20 мин свинины'
+    )
   })
 
   it('keeps a leading capital and all-caps words', () => {

@@ -2,8 +2,9 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import sharp from 'sharp'
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { prepareImage, estimateSkewDegrees } from '../image'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+
+import { estimateSkewDegrees, prepareImage } from '../image'
 
 let dir: string
 
@@ -15,7 +16,11 @@ afterAll(() => {
   fs.rmSync(dir, { recursive: true, force: true })
 })
 
-const textLikeBars = async (width: number, height: number, rotateDegrees: number): Promise<Buffer> => {
+const textLikeBars = async (
+  width: number,
+  height: number,
+  rotateDegrees: number
+): Promise<Buffer> => {
   const bars = Array.from({ length: 10 }, (_, i) => ({
     input: { create: { width: width - 80, height: 10, channels: 3 as const, background: '#000' } },
     left: 40,
@@ -32,7 +37,9 @@ const textLikeBars = async (width: number, height: number, rotateDegrees: number
 describe('prepareImage', () => {
   it('flattens an RGBA image onto white and always yields 3 channels', async () => {
     const file = path.join(dir, 'rgba.png')
-    await sharp({ create: { width: 4, height: 2, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    await sharp({
+      create: { width: 4, height: 2, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
+    })
       .png()
       .toFile(file)
     const image = await prepareImage(file)
@@ -64,7 +71,9 @@ describe('prepareImage', () => {
     const file = path.join(dir, 'tilted.png')
     fs.writeFileSync(file, await textLikeBars(400, 300, 3))
     const levelled = await prepareImage(file)
-    const grey = await sharp(levelled.data, { raw: { width: levelled.width, height: levelled.height, channels: 3 } })
+    const grey = await sharp(levelled.data, {
+      raw: { width: levelled.width, height: levelled.height, channels: 3 }
+    })
       .greyscale()
       .raw()
       .toBuffer()

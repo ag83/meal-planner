@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3'
-import { tokenize, normalizeTokens } from './normalize'
+
+import { normalizeTokens, tokenize } from './normalize'
 
 export interface TagMatch {
   tagId: number

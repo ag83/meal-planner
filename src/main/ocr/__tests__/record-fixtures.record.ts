@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { describe, it } from 'vitest'
+
 import { loadSessions, recognizeBlocks } from '../paddle/pipeline'
 
 const FIXTURES = path.join(process.cwd(), 'src/main/ocr/__tests__/fixtures')

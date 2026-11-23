@@ -1,4 +1,5 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
+
 import { vaultManager } from '../vault/manager'
 
 export const registerVaultHandlers = (): void => {

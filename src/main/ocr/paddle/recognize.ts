@@ -1,10 +1,11 @@
-import { rawSharp } from './image'
-import type { PreparedImage } from './image'
 import type { InferenceSession } from 'onnxruntime-node'
 import { Tensor } from 'onnxruntime-node'
-import { rgbaToChwFloat32 } from './tensor'
+
 import { ctcGreedyDecode } from './ctcDecode'
 import type { DetectedBox } from './detect'
+import type { PreparedImage } from './image'
+import { rawSharp } from './image'
+import { rgbaToChwFloat32 } from './tensor'
 
 export const RECOGNIZER_HEIGHT = 48
 const REC_MEAN: readonly [number, number, number] = [0.5, 0.5, 0.5]
@@ -42,9 +43,19 @@ export const runRecognition = async (
     .raw()
     .toBuffer({ resolveWithObject: true })
 
-  const tensorData = rgbaToChwFloat32(data, targetWidth, RECOGNIZER_HEIGHT, 3, REC_MEAN, REC_STD, true)
+  const tensorData = rgbaToChwFloat32(
+    data,
+    targetWidth,
+    RECOGNIZER_HEIGHT,
+    3,
+    REC_MEAN,
+    REC_STD,
+    true
+  )
   const inputName = session.inputNames[0]
-  const feeds = { [inputName]: new Tensor('float32', tensorData, [1, 3, RECOGNIZER_HEIGHT, targetWidth]) }
+  const feeds = {
+    [inputName]: new Tensor('float32', tensorData, [1, 3, RECOGNIZER_HEIGHT, targetWidth])
+  }
   const output = await session.run(feeds)
   const outputName = session.outputNames[0]
   const logitsResult = output[outputName]

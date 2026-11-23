@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { vault, tags } from '../lib/ipc'
+
+import type { Settings, TagAlias, TagKind, TagWithAliases } from '../../../shared/types'
+import { tags, vault } from '../lib/ipc'
 import { useSettingsStore } from '../stores/useSettingsStore'
-import type { TagWithAliases, TagKind, TagAlias, Settings } from '../../../shared/types'
 
 // ── Kind labels ───────────────────────────────────────────────────────────────
 
@@ -33,11 +34,11 @@ const AliasItem = ({
 }): React.JSX.Element => {
   return (
     <li className="flex items-center justify-between py-0.5">
-      <span className={`font-mono text-xs ${alias.disabled ? 'text-stone-300 line-through' : 'text-stone-600'}`}>
+      <span
+        className={`font-mono text-xs ${alias.disabled ? 'text-stone-300 line-through' : 'text-stone-600'}`}
+      >
         {alias.lemma}
-        {alias.isPrimary && (
-          <span className="ml-1 text-stone-400">(primary)</span>
-        )}
+        {alias.isPrimary && <span className="ml-1 text-stone-400">(primary)</span>}
         {alias.source === 'user' && !alias.isPrimary && (
           <span className="ml-1 text-violet-400">(custom)</span>
         )}
@@ -130,7 +131,10 @@ const TagRow = ({
             onBlur={handleLabelSave}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleLabelSave()
-              if (e.key === 'Escape') { setLabelInput(tag.label); setEditingLabel(false) }
+              if (e.key === 'Escape') {
+                setLabelInput(tag.label)
+                setEditingLabel(false)
+              }
             }}
             className="flex-1 rounded border border-stone-300 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-stone-400"
           />
@@ -145,7 +149,9 @@ const TagRow = ({
         )}
 
         {/* Kind badge */}
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${KIND_BADGE[tag.kind as TagKind]}`}>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${KIND_BADGE[tag.kind as TagKind]}`}
+        >
           {KIND_LABEL[tag.kind as TagKind]}
         </span>
 
@@ -196,10 +202,17 @@ const TagRow = ({
               <input
                 autoFocus
                 value={aliasInput}
-                onChange={(e) => { setAliasInput(e.target.value); setAliasError('') }}
+                onChange={(e) => {
+                  setAliasInput(e.target.value)
+                  setAliasError('')
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleAddAlias()
-                  if (e.key === 'Escape') { setAddingAlias(false); setAliasInput(''); setAliasError('') }
+                  if (e.key === 'Escape') {
+                    setAddingAlias(false)
+                    setAliasInput('')
+                    setAliasError('')
+                  }
                 }}
                 placeholder="e.g. томат"
                 className="flex-1 rounded border border-stone-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-stone-300"
@@ -211,7 +224,11 @@ const TagRow = ({
                 Add
               </button>
               <button
-                onClick={() => { setAddingAlias(false); setAliasInput(''); setAliasError('') }}
+                onClick={() => {
+                  setAddingAlias(false)
+                  setAliasInput('')
+                  setAliasError('')
+                }}
                 className="text-xs text-stone-400 hover:text-stone-600"
               >
                 Cancel
@@ -226,9 +243,7 @@ const TagRow = ({
             </button>
           )}
 
-          {aliasError && (
-            <p className="mt-1 text-xs text-red-500">{aliasError}</p>
-          )}
+          {aliasError && <p className="mt-1 text-xs text-red-500">{aliasError}</p>}
         </div>
       )}
     </div>
@@ -237,7 +252,11 @@ const TagRow = ({
 
 // ── Add tag form ──────────────────────────────────────────────────────────────
 
-const AddTagForm = ({ onCreated }: { onCreated: (tag: TagWithAliases) => void }): React.JSX.Element => {
+const AddTagForm = ({
+  onCreated
+}: {
+  onCreated: (tag: TagWithAliases) => void
+}): React.JSX.Element => {
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
   const [kind, setKind] = useState<TagKind>('ingredient')
@@ -246,7 +265,10 @@ const AddTagForm = ({ onCreated }: { onCreated: (tag: TagWithAliases) => void })
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = useCallback(async () => {
-    if (!label.trim()) { setError('Label is required'); return }
+    if (!label.trim()) {
+      setError('Label is required')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -287,7 +309,10 @@ const AddTagForm = ({ onCreated }: { onCreated: (tag: TagWithAliases) => void })
           <input
             autoFocus
             value={label}
-            onChange={(e) => { setLabel(e.target.value); setError('') }}
+            onChange={(e) => {
+              setLabel(e.target.value)
+              setError('')
+            }}
             placeholder="Label (e.g. Авокадо)"
             className="flex-1 rounded-lg border border-stone-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-stone-300"
           />
@@ -297,7 +322,9 @@ const AddTagForm = ({ onCreated }: { onCreated: (tag: TagWithAliases) => void })
             className="rounded-lg border border-stone-200 px-2 py-1.5 text-sm focus:outline-none"
           >
             {KIND_ORDER.map((k) => (
-              <option key={k} value={k}>{KIND_LABEL[k]}</option>
+              <option key={k} value={k}>
+                {KIND_LABEL[k]}
+              </option>
             ))}
           </select>
         </div>
@@ -310,7 +337,12 @@ const AddTagForm = ({ onCreated }: { onCreated: (tag: TagWithAliases) => void })
         {error && <p className="text-xs text-red-500">{error}</p>}
         <div className="flex justify-end gap-2">
           <button
-            onClick={() => { setOpen(false); setLabel(''); setAliasInput(''); setError('') }}
+            onClick={() => {
+              setOpen(false)
+              setLabel('')
+              setAliasInput('')
+              setError('')
+            }}
             className="rounded-lg px-3 py-1.5 text-sm text-stone-500 hover:bg-stone-50"
           >
             Cancel
@@ -344,7 +376,10 @@ const SettingsScreen = (): React.JSX.Element => {
   useEffect(() => {
     vault.getCurrent().then((v) => setVaultPath(v?.path ?? null))
     if (!store.loaded) store.load()
-    tags.list().then((t) => { setTagList(t); setTagsLoading(false) })
+    tags.list().then((t) => {
+      setTagList(t)
+      setTagsLoading(false)
+    })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleThemeChange = useCallback(
@@ -377,13 +412,14 @@ const SettingsScreen = (): React.JSX.Element => {
   }, [])
 
   const handleTagCreated = useCallback((tag: TagWithAliases) => {
-    setTagList((prev) => [...prev, tag].sort((a, b) =>
-      a.kind.localeCompare(b.kind) || a.label.localeCompare(b.label, 'ru')
-    ))
+    setTagList((prev) =>
+      [...prev, tag].sort(
+        (a, b) => a.kind.localeCompare(b.kind) || a.label.localeCompare(b.label, 'ru')
+      )
+    )
   }, [])
 
-  const visibleTags =
-    kindFilter === 'all' ? tagList : tagList.filter((t) => t.kind === kindFilter)
+  const visibleTags = kindFilter === 'all' ? tagList : tagList.filter((t) => t.kind === kindFilter)
 
   const groupedTags = KIND_ORDER.reduce<Record<TagKind, TagWithAliases[]>>(
     (acc, k) => {
@@ -410,10 +446,11 @@ const SettingsScreen = (): React.JSX.Element => {
       {/* Body */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-2xl space-y-8 p-6">
-
           {/* ── Vault ── */}
           <section>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">Vault</h2>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
+              Vault
+            </h2>
             <div className="rounded-xl border border-stone-200 bg-white p-4">
               {vaultPath ? (
                 <p className="mb-3 break-all font-mono text-xs text-stone-600">{vaultPath}</p>
@@ -448,7 +485,9 @@ const SettingsScreen = (): React.JSX.Element => {
 
           {/* ── Preferences ── */}
           <section>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">Preferences</h2>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
+              Preferences
+            </h2>
             <div className="rounded-xl border border-stone-200 bg-white divide-y divide-stone-100">
               <div className="flex items-center justify-between px-4 py-3">
                 <label className="text-sm text-stone-700">Theme</label>
@@ -467,13 +506,16 @@ const SettingsScreen = (): React.JSX.Element => {
 
           {/* ── Maintenance ── */}
           <section>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">Maintenance</h2>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
+              Maintenance
+            </h2>
             <div className="rounded-xl border border-stone-200 bg-white p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-stone-700">Re-tag all recipes</p>
                   <p className="mt-0.5 text-xs text-stone-400">
-                    Re-runs the tag matcher over stored OCR text using the current library. No re-OCR.
+                    Re-runs the tag matcher over stored OCR text using the current library. No
+                    re-OCR.
                   </p>
                   {retagResult !== null && (
                     <p className="mt-1 text-xs text-emerald-600">
@@ -532,9 +574,14 @@ const SettingsScreen = (): React.JSX.Element => {
                   const group = groupedTags[k]
                   if (group.length === 0) return null
                   return (
-                    <div key={k} className="rounded-xl border border-stone-200 bg-white overflow-hidden">
+                    <div
+                      key={k}
+                      className="rounded-xl border border-stone-200 bg-white overflow-hidden"
+                    >
                       <div className="border-b border-stone-100 bg-stone-50 px-3 py-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${KIND_BADGE[k]}`}>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${KIND_BADGE[k]}`}
+                        >
                           {KIND_LABEL[k]}
                         </span>
                         <span className="ml-2 text-xs text-stone-400">{group.length}</span>
@@ -555,7 +602,6 @@ const SettingsScreen = (): React.JSX.Element => {
               </div>
             )}
           </section>
-
         </div>
       </div>
     </div>

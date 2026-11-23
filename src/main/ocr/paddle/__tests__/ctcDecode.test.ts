@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+
 import { ctcGreedyDecode } from '../ctcDecode'
 
 const dict = ['a', 'b', 'c'] // class 1='a', class 2='b', class 3='c'; class 0 is blank

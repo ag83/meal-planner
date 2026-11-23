@@ -1,9 +1,10 @@
 import React from 'react'
 import { createHashRouter, RouterProvider } from 'react-router-dom'
-import Root from './routes/root'
+
+import Detail from './routes/detail'
 import FirstRun from './routes/first-run'
 import Gallery from './routes/gallery'
-import Detail from './routes/detail'
+import Root from './routes/root'
 import SettingsScreen from './routes/settings'
 
 const router = createHashRouter([

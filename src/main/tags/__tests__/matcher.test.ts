@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { runMigrations } from '../../db/migrations'
-import { seedFromEntries } from '../seed'
 import { extractTags } from '../matcher'
 import type { SeedEntry } from '../seed'
+import { seedFromEntries } from '../seed'
 
 let db: Database.Database
 
@@ -63,7 +64,11 @@ afterEach(() => {
 })
 
 const tagIdFor = (slug: string): number => {
-  return (db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug = ?').get(slug) as { id: number }).id
+  return (
+    db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug = ?').get(slug) as {
+      id: number
+    }
+  ).id
 }
 
 describe('extractTags', () => {

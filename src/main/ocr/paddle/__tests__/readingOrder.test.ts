@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+
 import { sortReadingOrder } from '../readingOrder'
 
 describe('sortReadingOrder', () => {
@@ -58,7 +59,6 @@ describe('sortReadingOrder', () => {
     expect(textOnly).toEqual([5, 4, 1, 3, 2])
   })
 
-
   it('reads whole columns when a short title bridges the gutter and the row gap is thinner than the gutters', () => {
     // Layout regions measured on a real three-column magazine page: a title centred over the
     // left and middle columns, a photo top right, and a 5px row gap between the middle column's
@@ -99,7 +99,6 @@ describe('sortReadingOrder', () => {
     ]
     expect(sortReadingOrder(boxes)).toEqual([0, 1, 2, 3])
   })
-
 
   it('reads a three-column recipe page column by column, with a promo box on the right', () => {
     // Regions measured on a real page: centred title and byline over the columns, ingredient box

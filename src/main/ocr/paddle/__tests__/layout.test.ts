@@ -1,14 +1,15 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+
 import { decodeLayout, LAYOUT_LABELS } from '../layout'
 
-const makeRow = (labelId: number, score: number, x0: number, y0: number, x1: number, y1: number): number[] => [
-  labelId,
-  score,
-  x0,
-  y0,
-  x1,
-  y1
-]
+const makeRow = (
+  labelId: number,
+  score: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number
+): number[] => [labelId, score, x0, y0, x1, y1]
 
 describe('decodeLayout', () => {
   it('keeps a row labeled "text" above threshold', () => {
@@ -27,7 +28,9 @@ describe('decodeLayout', () => {
   it('keeps a table region as text so its words are not lost', () => {
     const tableId = LAYOUT_LABELS.indexOf('table')
     const rows = new Float32Array(makeRow(tableId, 0.9, 10, 20, 100, 200))
-    expect(decodeLayout(rows, 1, 0.5)).toEqual([{ x0: 10, y0: 20, x1: 100, y1: 200, label: 'text' }])
+    expect(decodeLayout(rows, 1, 0.5)).toEqual([
+      { x0: 10, y0: 20, x1: 100, y1: 200, label: 'text' }
+    ])
   })
 
   it('drops a row below the score threshold', () => {

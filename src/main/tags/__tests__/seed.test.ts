@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { runMigrations } from '../../db/migrations'
-import { seedFromEntries } from '../seed'
 import type { SeedEntry } from '../seed'
+import { seedFromEntries } from '../seed'
 
 let db: Database.Database
 
@@ -55,12 +56,9 @@ describe('seedFromEntries', () => {
     const tagCount = db.prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM tags').get()!.n
     expect(tagCount).toBe(2)
 
-    const aliasCount = db
-      .prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM tag_aliases')
-      .get()!.n
-    const firstRun = db
-      .prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM tag_aliases')
-      .get()!.n
+    const aliasCount = db.prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM tag_aliases').get()!
+      .n
+    const firstRun = db.prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM tag_aliases').get()!.n
     expect(aliasCount).toBe(firstRun)
   })
 
@@ -77,7 +75,10 @@ describe('seedFromEntries', () => {
     seedFromEntries(db, entries)
 
     const aliases = db
-      .prepare<[string], { lemma: string }>('SELECT lemma FROM tag_aliases WHERE tag_id = (SELECT id FROM tags WHERE slug = ?)')
+      .prepare<
+        [string],
+        { lemma: string }
+      >('SELECT lemma FROM tag_aliases WHERE tag_id = (SELECT id FROM tags WHERE slug = ?)')
       .all('tomato')
     const lemmas = aliases.map((r) => r.lemma)
     // No duplicate lemma strings
@@ -87,9 +88,10 @@ describe('seedFromEntries', () => {
   it('marks primary alias correctly', () => {
     seedFromEntries(db, [ENTRIES[0]])
     const primary = db
-      .prepare<[string], { lemma: string; is_primary: number }>(
-        'SELECT lemma, is_primary FROM tag_aliases WHERE tag_id = (SELECT id FROM tags WHERE slug = ?) AND is_primary = 1'
-      )
+      .prepare<
+        [string],
+        { lemma: string; is_primary: number }
+      >('SELECT lemma, is_primary FROM tag_aliases WHERE tag_id = (SELECT id FROM tags WHERE slug = ?) AND is_primary = 1')
       .all('tomato')
     expect(primary.length).toBe(1)
   })
@@ -100,9 +102,12 @@ describe('seedFromEntries', () => {
       `INSERT INTO tags (slug, label, kind, source, created_at) VALUES ('tomato','МойПомидор','ingredient','user',1)`
     ).run()
     seedFromEntries(db, ENTRIES)
-    const row = db.prepare<[string], { label: string; source: string }>(
-      'SELECT label, source FROM tags WHERE slug = ?'
-    ).get('tomato')!
+    const row = db
+      .prepare<
+        [string],
+        { label: string; source: string }
+      >('SELECT label, source FROM tags WHERE slug = ?')
+      .get('tomato')!
     expect(row.label).toBe('МойПомидор')
     expect(row.source).toBe('user')
   })
@@ -119,9 +124,10 @@ describe('seedFromEntries', () => {
     ])
 
     const rows = db
-      .prepare<[], { lemma: string; match_mode: string }>(
-        `SELECT lemma, match_mode FROM tag_aliases WHERE match_mode='exact' ORDER BY lemma`
-      )
+      .prepare<
+        [],
+        { lemma: string; match_mode: string }
+      >(`SELECT lemma, match_mode FROM tag_aliases WHERE match_mode='exact' ORDER BY lemma`)
       .all()
 
     expect(rows.map((r) => r.lemma)).toEqual(['печенье', 'печенья'])

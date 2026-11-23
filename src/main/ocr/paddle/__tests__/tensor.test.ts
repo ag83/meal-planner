@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+
 import { rgbaToChwFloat32 } from '../tensor'
 
 describe('rgbaToChwFloat32', () => {
@@ -8,9 +9,12 @@ describe('rgbaToChwFloat32', () => {
     const result = rgbaToChwFloat32(pixels, 2, 1, 3, [0.5, 0.5, 0.5], [0.5, 0.5, 0.5], false)
     // (255/255 - 0.5)/0.5 = 1 ; (0/255 - 0.5)/0.5 = -1
     expect(Array.from(result)).toEqual([
-      1, -1, // R channel, both pixels
-      -1, 1, // G channel, both pixels
-      -1, -1 // B channel, both pixels
+      1,
+      -1, // R channel, both pixels
+      -1,
+      1, // G channel, both pixels
+      -1,
+      -1 // B channel, both pixels
     ])
   })
 
@@ -18,9 +22,12 @@ describe('rgbaToChwFloat32', () => {
     const pixels = Buffer.from([255, 0, 0, 0, 255, 0])
     const result = rgbaToChwFloat32(pixels, 2, 1, 3, [0.5, 0.5, 0.5], [0.5, 0.5, 0.5], true)
     expect(Array.from(result)).toEqual([
-      -1, -1, // channel 0 is now B (was R)
-      -1, 1, // channel 1 is G, unchanged
-      1, -1 // channel 2 is now R (was B)
+      -1,
+      -1, // channel 0 is now B (was R)
+      -1,
+      1, // channel 1 is G, unchanged
+      1,
+      -1 // channel 2 is now R (was B)
     ])
   })
 

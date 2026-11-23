@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import { vault } from '../lib/ipc'
 
 const FirstRun = (): React.JSX.Element => {
@@ -41,8 +42,8 @@ const FirstRun = (): React.JSX.Element => {
         )}
 
         <p className="mt-6 text-xs leading-relaxed text-stone-400">
-          Pick an empty folder to start a new collection, or pick an existing Meal Planner folder
-          to pick up where you left off.
+          Pick an empty folder to start a new collection, or pick an existing Meal Planner folder to
+          pick up where you left off.
         </p>
       </div>
     </div>

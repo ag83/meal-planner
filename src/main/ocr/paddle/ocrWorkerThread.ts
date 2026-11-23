@@ -1,6 +1,7 @@
 import { parentPort } from 'worker_threads'
-import { loadSessions, processImage } from './pipeline'
+
 import type { Sessions } from './pipeline'
+import { loadSessions, processImage } from './pipeline'
 
 interface WorkerRequest {
   id: number

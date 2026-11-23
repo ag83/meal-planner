@@ -1,15 +1,16 @@
+import { protocol } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
-import { protocol } from 'electron'
-import { vaultManager } from '../vault/manager'
+
 import { getDb } from '../db/connection'
+import { vaultManager } from '../vault/manager'
 
 // recipe-thumb://thumb/<id>  →  <vault>/thumbs/<id>.webp
 // recipe-thumb://full/<id>   →  <vault>/pictures/<id>.<ext>
 export const registerThumbProtocol = (): void => {
   protocol.handle('recipe-thumb', async (request) => {
     const url = new URL(request.url)
-    const type = url.hostname  // 'thumb' | 'full'
+    const type = url.hostname // 'thumb' | 'full'
     const id = url.pathname.slice(1)
 
     if (!/^[A-Za-z0-9_-]{1,32}$/.test(id)) {

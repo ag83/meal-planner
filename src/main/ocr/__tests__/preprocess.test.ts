@@ -1,15 +1,13 @@
-import { describe, it, expect } from 'vitest'
 import path from 'path'
 import sharp from 'sharp'
+import { describe, expect, it } from 'vitest'
+
 import { preprocessImage, UPSCALE } from '../preprocess'
 
 // process.cwd()-relative, matching the established fixture-loading pattern in
 // src/main/tags/__tests__/seed-rules.test.ts:19. Avoids __dirname, which is not
 // reliably available in Vitest's ESM transform.
-const IMAGE = path.join(
-  process.cwd(),
-  'src/main/ocr/__tests__/fixtures/images/pork-two-column.png'
-)
+const IMAGE = path.join(process.cwd(), 'src/main/ocr/__tests__/fixtures/images/pork-two-column.png')
 
 describe('preprocessImage', () => {
   it('upscales by UPSCALE', async () => {

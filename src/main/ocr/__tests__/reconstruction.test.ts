@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest'
 import fs from 'fs'
 import path from 'path'
+import { describe, expect, it } from 'vitest'
+
+import type { TessBlock } from '../blocks'
 import { blocksToLines } from '../blocks'
 import { joinLines } from '../postprocess'
-import type { TessBlock } from '../blocks'
 
 const FIXTURES = path.join(process.cwd(), 'src/main/ocr/__tests__/fixtures')
 
@@ -60,9 +61,7 @@ describe('two-column page', () => {
   })
 
   it('reads the ingredient sentence contiguously', () => {
-    expect(textOf('pork-two-column')).toContain(
-      '300 г свинины, луковица, 3 зубчика чеснока'
-    )
+    expect(textOf('pork-two-column')).toContain('300 г свинины, луковица, 3 зубчика чеснока')
   })
 })
 
@@ -86,6 +85,8 @@ describe('boxed page with a photograph under both columns', () => {
 
   it('repairs the misread small words and units in the method', () => {
     expect(text).toContain('обжарьте мелко нарезанные лук с морковкой')
-    expect(text).toContain('томатами и пастой, тушите 2-3 мин. Добавьте мелко нарезанные сладкие и острый перцы')
+    expect(text).toContain(
+      'томатами и пастой, тушите 2-3 мин. Добавьте мелко нарезанные сладкие и острый перцы'
+    )
   })
 })

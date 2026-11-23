@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { blocksToLines } from '../blocks'
+import { describe, expect, it } from 'vitest'
+
 import type { OcrWord, TessBlock } from '../blocks'
+import { blocksToLines } from '../blocks'
 
 const w = (text: string, confidence = 90): OcrWord => ({ text, confidence })
 

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { recipes } from '../lib/ipc'
-import { TagCombobox } from '../components/TagCombobox'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+
 import type { RecipeFull, RecipeTag, TagSuggestion } from '../../../shared/types'
+import { TagCombobox } from '../components/TagCombobox'
+import { recipes } from '../lib/ipc'
 
 // ── Tag chip ─────────────────────────────────────────────────────────────────
 
@@ -113,10 +114,7 @@ const Detail = (): React.JSX.Element => {
     }
   }, [recipe, deleting, navigate])
 
-  const tagIds = useMemo(
-    () => new Set(recipe?.tags.map((t) => t.tagId) ?? []),
-    [recipe?.tags]
-  )
+  const tagIds = useMemo(() => new Set(recipe?.tags.map((t) => t.tagId) ?? []), [recipe?.tags])
 
   if (loading) {
     return (
@@ -196,19 +194,11 @@ const Detail = (): React.JSX.Element => {
               {recipe.tags.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-1.5">
                   {recipe.tags.map((tag) => (
-                    <TagChip
-                      key={tag.tagId}
-                      tag={tag}
-                      onRemove={() => handleRemoveTag(tag)}
-                    />
+                    <TagChip key={tag.tagId} tag={tag} onRemove={() => handleRemoveTag(tag)} />
                   ))}
                 </div>
               )}
-              <TagCombobox
-                selectedIds={tagIds}
-                onSelect={handleAddTag}
-                placeholder="Add tag…"
-              />
+              <TagCombobox selectedIds={tagIds} onSelect={handleAddTag} placeholder="Add tag…" />
             </div>
 
             {/* Notes */}
@@ -256,9 +246,7 @@ const Detail = (): React.JSX.Element => {
 
             {/* Meta */}
             <div className="border-t border-stone-100 pt-4 text-xs text-stone-400 space-y-1">
-              {recipe.ocrConf != null && (
-                <p>OCR confidence: {Math.round(recipe.ocrConf)}%</p>
-              )}
+              {recipe.ocrConf != null && <p>OCR confidence: {Math.round(recipe.ocrConf)}%</p>}
               <p>
                 {recipe.width} × {recipe.height}px
               </p>

@@ -1,13 +1,13 @@
 // Typed facade over window.api — import this instead of calling window.api directly.
 import type {
-  VaultInfo,
   IngestProgress,
-  RecipeSummary,
   RecipeFull,
+  RecipeSummary,
+  Settings,
+  TagKind,
   TagSuggestion,
   TagWithAliases,
-  TagKind,
-  Settings
+  VaultInfo
 } from '../../../shared/types'
 
 export const vault = {
@@ -30,8 +30,7 @@ export const recipes = {
   delete: (id: string): Promise<void> => window.api.recipes.delete(id),
   pickFiles: (): Promise<string[]> => window.api.recipes.pickFiles(),
   ingest: (paths: string[]): Promise<void> => window.api.recipes.ingest(paths),
-  onProgress: (cb: (p: IngestProgress) => void): (() => void) =>
-    window.api.recipes.onProgress(cb)
+  onProgress: (cb: (p: IngestProgress) => void): (() => void) => window.api.recipes.onProgress(cb)
 }
 
 export const tags = {

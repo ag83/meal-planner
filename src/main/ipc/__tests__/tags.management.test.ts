@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { runMigrations } from '../../db/migrations'
-import { seedFromEntries } from '../../tags/seed'
-import { normalizeTokens } from '../../tags/normalize'
 import { extractTags } from '../../tags/matcher'
+import { normalizeTokens } from '../../tags/normalize'
 import type { SeedEntry } from '../../tags/seed'
+import { seedFromEntries } from '../../tags/seed'
 
 let db: Database.Database
 
@@ -47,20 +48,47 @@ const toSlug = (label: string): string => {
   return `${base || 'tag'}_${Date.now().toString(36)}`
 }
 
-const listTags = (kind?: string): Array<{
-  id: number; slug: string; label: string; kind: string; source: string; disabled: boolean
+const listTags = (
+  kind?: string
+): Array<{
+  id: number
+  slug: string
+  label: string
+  kind: string
+  source: string
+  disabled: boolean
   recipeCount: number
-  aliases: Array<{ id: number; lemma: string; isPrimary: boolean; source: string; disabled: boolean }>
+  aliases: Array<{
+    id: number
+    lemma: string
+    isPrimary: boolean
+    source: string
+    disabled: boolean
+  }>
 }> => {
   const rows = (
     kind
       ? db.prepare('SELECT * FROM tags WHERE kind=? ORDER BY label ASC').all(kind)
       : db.prepare('SELECT * FROM tags ORDER BY kind ASC, label ASC').all()
-  ) as Array<{ id: number; slug: string; label: string; kind: string; source: string; disabled: number }>
+  ) as Array<{
+    id: number
+    slug: string
+    label: string
+    kind: string
+    source: string
+    disabled: number
+  }>
 
-  const getAliases = db.prepare<[number], {
-    id: number; lemma: string; is_primary: number; source: string; disabled: number
-  }>('SELECT * FROM tag_aliases WHERE tag_id=? ORDER BY is_primary DESC, lemma ASC')
+  const getAliases = db.prepare<
+    [number],
+    {
+      id: number
+      lemma: string
+      is_primary: number
+      source: string
+      disabled: number
+    }
+  >('SELECT * FROM tag_aliases WHERE tag_id=? ORDER BY is_primary DESC, lemma ASC')
   const getCount = db.prepare<[number], { n: number }>(
     'SELECT COUNT(*) AS n FROM recipe_tags WHERE tag_id=?'
   )
@@ -109,7 +137,10 @@ const createTag = (label: string, kind: string, aliases: string[] = []): number 
   return newId
 }
 
-const updateTag = (id: number, patch: { label?: string; kind?: string; disabled?: boolean }): void => {
+const updateTag = (
+  id: number,
+  patch: { label?: string; kind?: string; disabled?: boolean }
+): void => {
   if (patch.label !== undefined) {
     db.prepare('UPDATE tags SET label=? WHERE id=?').run(patch.label.trim(), id)
   }
@@ -125,9 +156,10 @@ const addAlias = (tId: number, surface: string): void => {
   const lemma = normalizeTokens(surface.trim()).join(' ')
   if (!lemma) throw new Error('Alias normalizes to empty string')
   const existing = db
-    .prepare<[string], { tag_id: number }>(
-      'SELECT tag_id FROM tag_aliases WHERE lemma=? AND disabled=0 LIMIT 1'
-    )
+    .prepare<
+      [string],
+      { tag_id: number }
+    >('SELECT tag_id FROM tag_aliases WHERE lemma=? AND disabled=0 LIMIT 1')
     .get(lemma)
   if (existing && existing.tag_id !== tId) {
     throw new Error('This alias is already assigned to another tag')
@@ -139,9 +171,10 @@ const addAlias = (tId: number, surface: string): void => {
 
 const removeAlias = (aliasId: number): void => {
   const row = db
-    .prepare<[number], { source: string; is_primary: number }>(
-      'SELECT source, is_primary FROM tag_aliases WHERE id=?'
-    )
+    .prepare<
+      [number],
+      { source: string; is_primary: number }
+    >('SELECT source, is_primary FROM tag_aliases WHERE id=?')
     .get(aliasId)
   if (!row) return
   if (row.is_primary) throw new Error('Cannot remove the primary alias')
@@ -164,9 +197,10 @@ const deleteTag = (id: number): void => {
 
 const retagAll = (): { updated: number } => {
   const allRecipes = db
-    .prepare<[], { id: string; ocr_text: string | null }>(
-      'SELECT id, ocr_text FROM recipes WHERE ocr_text IS NOT NULL'
-    )
+    .prepare<
+      [],
+      { id: string; ocr_text: string | null }
+    >('SELECT id, ocr_text FROM recipes WHERE ocr_text IS NOT NULL')
     .all()
 
   let updated = 0
@@ -210,9 +244,7 @@ describe('tags:list', () => {
   it('lists all seeded tags', () => {
     const result = listTags()
     expect(result.length).toBe(3)
-    expect(result.map((t) => t.slug)).toEqual(
-      expect.arrayContaining(['tomato', 'basil', 'pasta'])
-    )
+    expect(result.map((t) => t.slug)).toEqual(expect.arrayContaining(['tomato', 'basil', 'pasta']))
   })
 
   it('filters by kind', () => {
@@ -249,7 +281,9 @@ describe('tags:create', () => {
   it('inserts a new user tag', () => {
     const id = createTag('Авокадо', 'ingredient')
     const row = db.prepare('SELECT * FROM tags WHERE id=?').get(id) as {
-      label: string; source: string; kind: string
+      label: string
+      source: string
+      kind: string
     }
     expect(row.label).toBe('Авокадо')
     expect(row.source).toBe('user')
@@ -268,18 +302,18 @@ describe('tags:create', () => {
 
   it('stems and inserts extra aliases', () => {
     const id = createTag('Авокадо', 'ingredient', ['авокадос'])
-    const aliases = db
-      .prepare('SELECT lemma FROM tag_aliases WHERE tag_id=?')
-      .all(id) as Array<{ lemma: string }>
+    const aliases = db.prepare('SELECT lemma FROM tag_aliases WHERE tag_id=?').all(id) as Array<{
+      lemma: string
+    }>
     expect(aliases.length).toBeGreaterThanOrEqual(2)
   })
 
   it('deduplicates aliases that stem to the same lemma as the primary', () => {
     // If the extra alias surface stems to the same thing as label, it should not be double-inserted
     const id = createTag('Соль', 'ingredient', ['соль'])
-    const aliases = db
-      .prepare('SELECT lemma FROM tag_aliases WHERE tag_id=?')
-      .all(id) as Array<{ lemma: string }>
+    const aliases = db.prepare('SELECT lemma FROM tag_aliases WHERE tag_id=?').all(id) as Array<{
+      lemma: string
+    }>
     // primary + extra alias are the same stem — only one row should exist
     expect(aliases.length).toBe(1)
   })
@@ -431,9 +465,9 @@ describe('tags:retagAll', () => {
   it('tags a recipe whose ocr_text contains a known ingredient', () => {
     insertRecipe('r1', 'рецепт с помидором')
     retagAll()
-    const rows = db
-      .prepare('SELECT tag_id FROM recipe_tags WHERE recipe_id=?')
-      .all('r1') as Array<{ tag_id: number }>
+    const rows = db.prepare('SELECT tag_id FROM recipe_tags WHERE recipe_id=?').all('r1') as Array<{
+      tag_id: number
+    }>
     expect(rows.map((r) => r.tag_id)).toContain(tagId('tomato'))
   })
 
@@ -451,9 +485,10 @@ describe('tags:retagAll', () => {
 
   it('respects suppressions — suppressed tag is not re-added', () => {
     insertRecipe('r1', 'рецепт с помидором')
-    db.prepare(
-      'INSERT INTO recipe_tag_suppressions (recipe_id, tag_id) VALUES (?,?)'
-    ).run('r1', tagId('tomato'))
+    db.prepare('INSERT INTO recipe_tag_suppressions (recipe_id, tag_id) VALUES (?,?)').run(
+      'r1',
+      tagId('tomato')
+    )
     retagAll()
     const row = db
       .prepare('SELECT 1 FROM recipe_tags WHERE recipe_id=? AND tag_id=?')
@@ -482,9 +517,9 @@ describe('tags:retagAll', () => {
     // r1 doesn't contain basil; but tomato is already in seed — run retagAll
     const { updated } = retagAll()
     expect(updated).toBe(1)
-    const rows = db
-      .prepare('SELECT tag_id FROM recipe_tags WHERE recipe_id=?')
-      .all('r1') as Array<{ tag_id: number }>
+    const rows = db.prepare('SELECT tag_id FROM recipe_tags WHERE recipe_id=?').all('r1') as Array<{
+      tag_id: number
+    }>
     expect(rows.map((r) => r.tag_id)).toContain(tagId('tomato'))
   })
 

@@ -1,14 +1,14 @@
 // Augments Window with the typed IPC surface exposed by the preload.
 // Included by both tsconfig.node.json (preload) and tsconfig.web.json (renderer).
 import type {
-  VaultInfo,
   IngestProgress,
-  RecipeSummary,
   RecipeFull,
+  RecipeSummary,
+  Settings,
+  TagKind,
   TagSuggestion,
   TagWithAliases,
-  TagKind,
-  Settings
+  VaultInfo
 } from './types'
 
 declare global {
@@ -36,7 +36,10 @@ declare global {
         suggest(prefix: string, limit?: number): Promise<TagSuggestion[]>
         list(kind?: TagKind): Promise<TagWithAliases[]>
         create(input: { label: string; kind: TagKind; aliases?: string[] }): Promise<number>
-        update(id: number, patch: { label?: string; kind?: TagKind; disabled?: boolean }): Promise<void>
+        update(
+          id: number,
+          patch: { label?: string; kind?: TagKind; disabled?: boolean }
+        ): Promise<void>
         addAlias(tagId: number, surface: string): Promise<void>
         removeAlias(aliasId: number): Promise<void>
         delete(id: number): Promise<void>

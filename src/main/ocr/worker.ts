@@ -1,9 +1,10 @@
+import { app } from 'electron'
 import os from 'os'
 import path from 'path'
-import { app } from 'electron'
-import { createWorkerPool } from './workerPool'
-import type { WorkerPool } from './workerPool'
+
 import type { PipelineResult } from './paddle/pipeline'
+import type { WorkerPool } from './workerPool'
+import { createWorkerPool } from './workerPool'
 
 // Each worker holds three ONNX sessions, and ingest runs one image at a time, so a
 // large pool buys memory cost without throughput.

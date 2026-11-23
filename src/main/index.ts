@@ -1,13 +1,14 @@
-import { app, shell, BrowserWindow, protocol } from 'electron'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { app, BrowserWindow, protocol, shell } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { registerVaultHandlers } from './ipc/vault'
+
 import { registerRecipeHandlers } from './ipc/recipes'
-import { registerTagHandlers } from './ipc/tags'
 import { registerSettingsHandlers } from './ipc/settings'
+import { registerTagHandlers } from './ipc/tags'
+import { registerVaultHandlers } from './ipc/vault'
+import { terminateOcrPool } from './ocr/worker'
 import { registerThumbProtocol } from './protocol/thumb'
 import { vaultManager } from './vault/manager'
-import { terminateOcrPool } from './ocr/worker'
 
 // Must be called before app.whenReady()
 protocol.registerSchemesAsPrivileged([

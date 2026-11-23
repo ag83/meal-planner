@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+
 import { findConnectedComponents } from '../connectedComponents'
 
 const maskFromRows = (rows: string[]): { mask: Uint8Array; width: number; height: number } => {

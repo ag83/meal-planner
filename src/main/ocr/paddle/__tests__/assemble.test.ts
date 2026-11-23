@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+
+import type { RecognizedLine } from '../assemble'
 import { assembleBlocks, splitBoxesAtRegions } from '../assemble'
 import type { LayoutRegion } from '../layout'
-import type { RecognizedLine } from '../assemble'
 
 describe('assembleBlocks', () => {
   it('groups lines into their containing region, one paragraph per region', () => {
@@ -72,7 +73,10 @@ describe('assembleBlocks', () => {
       { box: { x0: 500, y0: 500, x1: 600, y1: 520 }, text: 'orphan', confidence: 0.9 }
     ]
     const blocks = assembleBlocks(lines, regions)
-    expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([['inside'], ['orphan']])
+    expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([
+      ['inside'],
+      ['orphan']
+    ])
   })
 
   it('keeps a line that overhangs the bottom of a region in that region', () => {
@@ -98,7 +102,9 @@ describe('assembleBlocks', () => {
       { box: { x0: 10, y0: 210, x1: 90, y1: 240 }, text: 'footer strip', confidence: 0.9 }
     ]
     expect(assembleBlocks(lines, regions)).toHaveLength(1)
-    expect(assembleBlocks(lines, regions)[0].paragraphs[0].lines[0].words[0].text).toBe('footer strip')
+    expect(assembleBlocks(lines, regions)[0].paragraphs[0].lines[0].words[0].text).toBe(
+      'footer strip'
+    )
   })
 
   it('treats a region nested inside another text region as part of it', () => {
@@ -112,7 +118,9 @@ describe('assembleBlocks', () => {
       { box: { x0: 10, y0: 295, x1: 90, y1: 325 }, text: 'three', confidence: 0.9 }
     ]
     const blocks = assembleBlocks(lines, regions)
-    expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([['one', 'two', 'three']])
+    expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([
+      ['one', 'two', 'three']
+    ])
   })
 
   it('still returns every line, top to bottom, when the layout model finds no regions', () => {
@@ -138,7 +146,9 @@ describe('assembleBlocks', () => {
       { box: { x0: 30, y0: 50, x1: 90, y1: 70 }, text: 'label on a jar', confidence: 0.9 }
     ]
     const blocks = assembleBlocks(lines, regions)
-    expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([['Свинина']])
+    expect(blocks.map((b) => b.paragraphs[0].lines.map((l) => l.words[0].text))).toEqual([
+      ['Свинина']
+    ])
   })
 
   it('reads two columns in order when a photograph spans both under them', () => {
@@ -154,14 +164,26 @@ describe('assembleBlocks', () => {
       text,
       confidence: 0.9
     })
-    const lines = [line(230, 5, 'right top'), line(5, 3, 'title'), line(5, 40, 'left body'), line(235, 40, 'right body')]
+    const lines = [
+      line(230, 5, 'right top'),
+      line(5, 3, 'title'),
+      line(5, 40, 'left body'),
+      line(235, 40, 'right body')
+    ]
     const blocks = assembleBlocks(lines, regions)
-    expect(blocks.map((b) => b.paragraphs[0].lines[0].words[0].text)).toEqual(['title', 'left body', 'right top', 'right body'])
+    expect(blocks.map((b) => b.paragraphs[0].lines[0].words[0].text)).toEqual([
+      'title',
+      'left body',
+      'right top',
+      'right body'
+    ])
   })
 
   it('drops a line lying over a photograph', () => {
     const regions: LayoutRegion[] = [{ x0: 0, y0: 0, x1: 100, y1: 100, label: 'image' }]
-    const lines: RecognizedLine[] = [{ box: { x0: 10, y0: 10, x1: 90, y1: 30 }, text: 'label on a jar', confidence: 0.9 }]
+    const lines: RecognizedLine[] = [
+      { box: { x0: 10, y0: 10, x1: 90, y1: 30 }, text: 'label on a jar', confidence: 0.9 }
+    ]
     expect(assembleBlocks(lines, regions)).toEqual([])
   })
 })
@@ -191,7 +213,10 @@ describe('columns inside one region', () => {
   })
 
   it('keeps one block when only some rows have a gap', () => {
-    const lines = [...row(10, 'L1', 'R1'), { box: { x0: 10, y0: 50, x1: 390, y1: 80 }, text: 'wide', confidence: 0.9 }]
+    const lines = [
+      ...row(10, 'L1', 'R1'),
+      { box: { x0: 10, y0: 50, x1: 390, y1: 80 }, text: 'wide', confidence: 0.9 }
+    ]
     expect(assembleBlocks(lines, region)).toHaveLength(1)
   })
 })
