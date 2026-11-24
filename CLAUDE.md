@@ -105,6 +105,13 @@ Seed re-application on upgrade is **strictly additive**: insert missing built-in
 - **Editing `resources/seed-tags.yaml` cannot remove anything from an existing vault.** The seed loader is additive by design, so deletions and alias re-assignments need a migration that disables the old `source='builtin'` rows. After a rules change, users must run **Retag all** in Settings for existing recipes to pick it up.
 - **Don't delete built-in tags or aliases on seed re-apply.** Only insert missing ones; respect `disabled` flags. User trust depends on this.
 
+## Testing
+
+- `npm run coverage` runs Vitest with v8 coverage (report in `coverage/`, git-ignored).
+- **Project-wide coverage must be at least 70%** (statements, branches, functions, lines). Check the report before finishing; don't merge work that lowers it.
+- Renderer components, routes and stores are tested with **React Testing Library** (`@testing-library/react`, `user-event`). Opt each file into jsdom with a `// @vitest-environment jsdom` docblock; main-process tests stay on the default node environment.
+- Test the real handler or module, not a re-implementation of its SQL or logic.
+
 ## When making changes
 
 - Schema change → bump `schemaVersion` in `vault.json`, add a migration, write a test that runs old → new on a fixture vault.
