@@ -1,6 +1,14 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*", "src/shared/**/*", "src/**/__tests__/**/*"],
+  "include": [
+    "electron.vite.config.*",
+    "playwright.config.ts",
+    "e2e/**/*",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/shared/**/*",
+    "src/**/__tests__/**/*"
+  ],
   "compilerOptions": {
     "composite": true,
     "moduleResolution": "bundler",
