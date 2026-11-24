@@ -27,6 +27,6 @@ export default tseslint.config(
     }
   },
   {
-    ignores: ['out/**', 'dist/**', 'node_modules/**', '.worktrees/**']
+    ignores: ['out/**', 'dist/**', 'node_modules/**', '.worktrees/**', '.claude/skills/**']
   }
 )
