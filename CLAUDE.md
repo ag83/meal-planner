@@ -107,6 +107,7 @@ Seed re-application on upgrade is **strictly additive**: insert missing built-in
 
 ## Testing
 
+- **Unit tests must be green before a PR is created.** `npm test -- --run` runs in the husky `pre-push` hook and blocks the push on any failure; run it yourself before opening a PR. Never bypass with `--no-verify`.
 - `npm run coverage` runs Vitest with v8 coverage (report in `coverage/`, git-ignored).
 - **Project-wide coverage must be at least 70%** (statements, branches, functions, lines). Check the report before finishing; don't merge work that lowers it.
 - Renderer components, routes and stores are tested with **React Testing Library** (`@testing-library/react`, `user-event`). Opt each file into jsdom with a `// @vitest-environment jsdom` docblock; main-process tests stay on the default node environment.
