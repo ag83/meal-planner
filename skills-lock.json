@@ -7,6 +7,13 @@
       "skillPath": "skills/agent-browser/SKILL.md",
       "computedHash": "bb10760ef4a133f773d663dcf6085af2e4b45846822e8f1794daefe01efa1821"
     },
+    "electron-best-practices": {
+      "source": "jwynia/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/tech/development/tooling/electron-best-practices/SKILL.md",
+      "computedHash": "744549070132b3bc0602fd7121d42278ba74694b9d0943358093bde3543cbe97"
+    },
     "git-workflow-and-versioning": {
       "source": "addyosmani/agent-skills",
       "sourceType": "github",

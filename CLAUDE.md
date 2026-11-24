@@ -15,8 +15,8 @@ The renderer never touches `fs`, `path`, sqlite, or `child_process`. All side ef
 ## Conventions
 
 - **TypeScript everywhere**; no `.js` in `src/`.
-- **IPC is the only main↔renderer channel**. Add new handlers in `src/main/ipc/<domain>.ts` and mirror the type in `src/preload/api.d.ts`. Renderer imports the typed `window.api` only.
-- **Electron security non-negotiables**: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true` for the renderer, CSP header set in the main window. Never relax these without a written justification.
+- **IPC handlers** live in `src/main/ipc/<domain>.ts`; mirror each type in `src/preload/api.d.ts`.
+- **Electron practices**: follow the `electron-best-practices` skill (security defaults, typed IPC). Packaging is **`electron-builder`** (`build` block in `package.json`, native modules via `asarUnpack`); ignore the skill's Electron Forge advice.
 - **DB writes go through prepared statements**, wrapped in a transaction when touching > 1 row.
 - **Vault paths**: never persist absolute paths inside `recipes` rows — store the id/ext and reconstruct paths from the current vault root. (Survives folder-rename and OS-reinstall.)
 - **No comments narrating WHAT** — code names should carry that. Comment WHY only when it's non-obvious.
