@@ -9,6 +9,7 @@
     "src/shared/**/*",
     "src/**/__tests__/**/*"
   ],
+  "exclude": ["src/renderer/**/*"],
   "compilerOptions": {
     "composite": true,
     "moduleResolution": "bundler",
