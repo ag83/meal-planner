@@ -9,6 +9,15 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-db.mjs\""
           }
         ]
+      },
+      {
+        "matcher": "Read|Edit|Grep|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-env.mjs\""
+          }
+        ]
       }
     ]
   }
