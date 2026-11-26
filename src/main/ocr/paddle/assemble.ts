@@ -1,7 +1,7 @@
-import { sortReadingOrder } from './readingOrder'
+import type { OcrWord, TessBlock, TessLine } from '../blocks'
 import type { DetectedBox } from './detect'
 import type { LayoutRegion } from './layout'
-import type { OcrWord, TessBlock, TessLine } from '../blocks'
+import { sortReadingOrder } from './readingOrder'
 
 export interface RecognizedLine {
   box: DetectedBox
@@ -78,7 +78,10 @@ const splitColumns = (lines: RecognizedLine[]): RecognizedLine[][] => {
     Math.max(...column.map((l) => l.box.x1)) - Math.min(...column.map((l) => l.box.x0))
   const real =
     columns.length > 1 &&
-    columns.every((column) => widthOf(column) >= span * MIN_COLUMN_SHARE && groupRows(column).length >= MIN_COLUMN_ROWS)
+    columns.every(
+      (column) =>
+        widthOf(column) >= span * MIN_COLUMN_SHARE && groupRows(column).length >= MIN_COLUMN_ROWS
+    )
   return real ? columns : [lines]
 }
 
@@ -87,7 +90,10 @@ const toBlock = (lines: TessLine[]): TessBlock => ({ paragraphs: [{ lines }] })
 // blocksToLines' DEFAULT_MIN_CONFIDENCE (blocks.ts) assumes Tesseract's 0-100 confidence
 // scale; this recognizer reports a 0-1 probability, so it is rescaled here to keep that
 // shared filter meaningful without modifying blocks.ts itself.
-const toWord = (line: RecognizedLine): OcrWord => ({ text: line.text, confidence: line.confidence * 100 })
+const toWord = (line: RecognizedLine): OcrWord => ({
+  text: line.text,
+  confidence: line.confidence * 100
+})
 
 const isInside = (inner: LayoutRegion, outer: LayoutRegion): boolean =>
   inner.x0 >= outer.x0 && inner.x1 <= outer.x1 && inner.y0 >= outer.y0 && inner.y1 <= outer.y1
@@ -111,7 +117,10 @@ const dropNestedRegions = (regions: LayoutRegion[]): LayoutRegion[] =>
 // between their regions, where nothing claims it. Cutting it at the region edges before
 // recognition gives each column its own piece. Only done when the regions under the box are
 // side by side; overlapping ones give no clean place to cut.
-export const splitBoxesAtRegions = (boxes: DetectedBox[], allRegions: LayoutRegion[]): DetectedBox[] => {
+export const splitBoxesAtRegions = (
+  boxes: DetectedBox[],
+  allRegions: LayoutRegion[]
+): DetectedBox[] => {
   const regions = dropNestedRegions(allRegions).filter((region) => region.label !== 'image')
   return boxes.flatMap((box) => {
     const { cy } = boxCenter(box)
@@ -131,21 +140,28 @@ export const splitBoxesAtRegions = (boxes: DetectedBox[], allRegions: LayoutRegi
   })
 }
 
-export const assembleBlocks = (lines: RecognizedLine[], allRegions: LayoutRegion[]): TessBlock[] => {
+export const assembleBlocks = (
+  lines: RecognizedLine[],
+  allRegions: LayoutRegion[]
+): TessBlock[] => {
   const regions = dropNestedRegions(allRegions)
   const linesByRegion: RecognizedLine[][] = regions.map(() => [])
   const orphans: RecognizedLine[] = []
 
   for (const line of lines) {
     const { cx, cy } = boxCenter(line.box)
-    const regionIdx = regions.findIndex((region) => region.label !== 'image' && regionContains(region, cx, cy))
+    const regionIdx = regions.findIndex(
+      (region) => region.label !== 'image' && regionContains(region, cx, cy)
+    )
     if (regionIdx !== -1) {
       linesByRegion[regionIdx].push(line)
       continue
     }
     // A title set over a photo sits in both an image region and its own title region, and the
     // latter wins above; only a line that no text region claims is photo content.
-    const overPhoto = regions.some((region) => region.label === 'image' && regionContains(region, cx, cy))
+    const overPhoto = regions.some(
+      (region) => region.label === 'image' && regionContains(region, cx, cy)
+    )
     if (overPhoto) continue
     const nearIdx = overhangRegionIndex(regions, line)
     if (nearIdx === -1) orphans.push(line)
@@ -155,9 +171,11 @@ export const assembleBlocks = (lines: RecognizedLine[], allRegions: LayoutRegion
   // A photo spanning both columns covers their gutter, so it would hide the columns from the
   // ordering; it never holds a line, so nothing is lost by leaving it out.
   const textIdx = regions.flatMap((region, idx) => (region.label === 'image' ? [] : [idx]))
-  const order = sortReadingOrder(textIdx.map((idx) => [regions[idx].x0, regions[idx].y0, regions[idx].x1, regions[idx].y1] as const)).map(
-    (i) => textIdx[i]
-  )
+  const order = sortReadingOrder(
+    textIdx.map(
+      (idx) => [regions[idx].x0, regions[idx].y0, regions[idx].x1, regions[idx].y1] as const
+    )
+  ).map((i) => textIdx[i])
 
   const blocks: TessBlock[] = []
   for (const regionIdx of order) {

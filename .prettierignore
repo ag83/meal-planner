@@ -1,0 +1,7 @@
+.claude/skills
+.worktrees
+out
+dist
+test-results
+playwright-report
+coverage

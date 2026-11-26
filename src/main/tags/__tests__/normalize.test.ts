@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { tokenize, normalizeTokens, normalizeSurface } from '../normalize'
+import { describe, expect, it } from 'vitest'
+
+import { normalizeSurface, normalizeTokens, tokenize } from '../normalize'
 
 describe('tokenize', () => {
   it('splits Russian text into word tokens', () => {

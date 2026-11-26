@@ -1,7 +1,8 @@
+import { app } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
-import { app } from 'electron'
-import type { VaultInfo, VaultJson, AppConfig } from '../../shared/types'
+
+import type { AppConfig, VaultInfo, VaultJson } from '../../shared/types'
 import { initDb } from '../db/connection'
 import { seedFromFile } from '../tags/seed'
 import { reconcile } from './reconcile'

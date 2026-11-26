@@ -1,0 +1,4 @@
+npm test -- --run </dev/null
+npm run test:e2e </dev/null
+command -v git-lfs >/dev/null 2>&1 || { echo >&2 "git-lfs not found on PATH"; exit 2; }
+git lfs pre-push "$@"

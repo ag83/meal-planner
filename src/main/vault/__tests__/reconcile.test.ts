@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import fs from 'fs/promises'
-import path from 'path'
 import os from 'os'
+import path from 'path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { runMigrations } from '../../db/migrations'
 import { reconcile } from '../reconcile'
 
@@ -28,7 +29,11 @@ const insertRecipe = (id: string, ext: string): void => {
 }
 
 const getMissing = (id: string): number => {
-  return (db.prepare<[string], { missing: number }>('SELECT missing FROM recipes WHERE id=?').get(id) as { missing: number }).missing
+  return (
+    db.prepare<[string], { missing: number }>('SELECT missing FROM recipes WHERE id=?').get(id) as {
+      missing: number
+    }
+  ).missing
 }
 
 const writePicture = async (filename: string): Promise<void> => {

@@ -8,79 +8,24 @@ Guidance for future Claude Code sessions working in this repo. Read `docs/SPECS.
 
 No server, no accounts, no telemetry. Everything lives in the vault folder the user picks on first run. **Russian-first**: OCR is Cyrillic-only (PaddleOCR `eslav` recognizer — see pitfalls), tag library and matching are morphology-aware (Snowball Russian stemmer).
 
-## Stack at a glance
-
-- **Electron** (main + preload + renderer, strict isolation)
-- **React 19 + TypeScript**, **Tailwind v4**, Radix primitives, lucide icons
-- **[electron-vite](https://electron-vite.org/)** for the build (main / preload / renderer all bundled via Vite)
-- **better-sqlite3** — relational storage for recipes, tags, aliases, recipe_tags
-- **`onnxruntime-node`** running exported PaddleOCR detector / `eslav` recognizer / layout models for OCR (`worker_threads` pool in main; models in `resources/models/`, bundled via `extraResources`)
-- **`natural`** (`PorterStemmerRu`) for Russian stemming; `Intl.Segmenter` for Unicode word boundaries
-- **`js-yaml`** for parsing the bundled `resources/seed-tags.yaml`
-- **sharp** for thumbnails and image dimensions
-- **Zustand** for renderer state, **React Router** for screens
-- **@tanstack/react-virtual** for the gallery grid
-
-## Repo layout (target — see IMPLEMENTATION_PLAN §1)
-
-```
-src/
-  main/      # Electron main: IPC, DB, OCR, ingestion, vault management
-  preload/   # contextBridge → window.api
-  renderer/  # React UI (gallery, detail, settings, first-run)
-docs/        # SPECS.md, IMPLEMENTATION_PLAN.md
-```
+## Boundaries
 
 The renderer never touches `fs`, `path`, sqlite, or `child_process`. All side effects go through IPC.
-
-## Commands (once Phase 1 is bootstrapped)
-
-```bash
-npm run dev         # electron-vite dev with HMR
-npm run build       # type-check + bundle
-npm run typecheck   # tsc --noEmit
-npm run lint        # eslint
-npm run test        # vitest
-npm run dist        # electron-builder, current platform
-```
-
-Until Phase 1 lands, `package.json` is a stub — don't run scripts expecting them to exist.
 
 ## Conventions
 
 - **TypeScript everywhere**; no `.js` in `src/`.
-- **Named arrow functions, not `function` declarations**: `const foo = (x: T): R => { ... }`, including default-exported components (`const Foo = (): React.JSX.Element => {...}; export default Foo`). No `function`/`async function` declarations or anonymous `function` expressions anywhere in `src/`.
-- **IPC is the only main↔renderer channel**. Add new handlers in `src/main/ipc/<domain>.ts` and mirror the type in `src/preload/api.d.ts`. Renderer imports the typed `window.api` only.
-- **Electron security non-negotiables**: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true` for the renderer, CSP header set in the main window. Never relax these without a written justification.
+- **IPC handlers** live in `src/main/ipc/<domain>.ts`; mirror each type in `src/preload/api.d.ts`.
+- **Electron practices**: follow the `electron-best-practices` skill (security defaults, typed IPC). Packaging is **`electron-builder`** (`build` block in `package.json`, native modules via `asarUnpack`); ignore the skill's Electron Forge advice.
 - **DB writes go through prepared statements**, wrapped in a transaction when touching > 1 row.
 - **Vault paths**: never persist absolute paths inside `recipes` rows — store the id/ext and reconstruct paths from the current vault root. (Survives folder-rename and OS-reinstall.)
 - **No comments narrating WHAT** — code names should carry that. Comment WHY only when it's non-obvious.
 
+## Communication
+
+Use the `caveman` skill (default `full` intensity) for all conversational replies in this repo to save tokens. Code, commit messages, PR descriptions and docs are written normally — caveman style applies to chat only.
+
 ## Git workflow
-
-### Branching — GitHub Flow
-
-**`develop` is the trunk.** It is always in a working, releasable state: `typecheck`,
-`lint`, `test` and `build` all pass on every commit. `master` holds released snapshots
-only.
-
-1. Branch off `develop` for any change — feature, fix, docs, chore alike.
-2. Commit in small steps, pushing early so the work is visible.
-3. Open a PR back into `develop` when ready for review.
-4. Merge once green, then delete the branch.
-5. Release by merging `develop` into `master` and tagging.
-
-- **Never commit directly to `develop` or `master`** — always branch first, even for a
-  one-line fix.
-- Branch names are kebab-case and describe the outcome, no type prefix required:
-  `ocr-reading-order`, `thumbnail-crash-fix`, `tag-rule-corrections`.
-- Branches are **short-lived** — hours or days, not weeks. A long-running branch means
-  the change should have been split.
-- Merge with `--no-ff` so the branch boundary stays visible in history.
-- Tag releases on `master` as `v<major>.<minor>.<patch>`, matching `package.json`.
-
-There are no `release/*` or `hotfix/*` branches. An urgent fix is just another short
-branch off `develop`, merged and released the same way.
 
 ### Commit messages — Conventional Commits
 
@@ -95,7 +40,7 @@ branch off `develop`, merged and released the same way.
 - **Type** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 - **Scope** — optional, the area touched. This repo's usual scopes: `ocr`, `tags`, `db`, `ipc`, `vault`, `ui`, `seed`.
 - **Subject** — imperative mood, lower case, no trailing period, ≤ 72 chars.
-- **Body** — the *why*, not the what. Wrap at 72 columns.
+- **Body** — the _why_, not the what. Wrap at 72 columns.
 - **Breaking changes** — append `!` after the type/scope and add a `BREAKING CHANGE:` footer. A `schemaVersion` bump is always breaking.
 
 ```
@@ -121,13 +66,9 @@ BREAKING CHANGE: schemaVersion 1 → 2; older builds refuse the vault.
 3. Renderer listens for `ingest:progress`, `vault:changed`, `tags:changed` to refresh the relevant stores.
 4. Search: user types in the `TagCombobox` → IPC `tags.suggest(prefix)` returns canonical tags (label only, never aliases) → user picks tags → `useTagFilterStore` holds selected IDs → IPC `recipes.filterByTags(ids, mode)` returns the filtered gallery. **AND is the default** mode; OR is a toggle.
 
-## Tag search (SPECS §7)
+## Tag search
 
-- Tags are first-class. `tags` rows are canonical concepts (one label per concept); `tag_aliases` rows are all the recognized forms (lemmas) that resolve to a tag.
-- **The dropdown shows only `tags.label`** — alias matches are silent. Typing `том` returns `Помидор` because `томат` is an alias, but the user never sees the word `томат` in the dropdown.
-- All normalization (lowercase, NFC, ё→е, `Intl.Segmenter` word split, `PorterStemmerRu` stem) goes through **one** module: `src/main/tags/normalize.ts`. Do not duplicate this logic — every code path that handles Russian text for matching must call it.
-- Multi-word ingredients (`оливковое масло`, `болгарский перец`) are stored as space-joined stems in `tag_aliases.lemma`. The ingest matcher scans 1–3-token sliding windows over the stemmed OCR stream.
-- **No FTS5 in v1.** `ocr_text` is retained on `recipes` for display and the v2 free-text feature.
+See [`src/main/tags/CLAUDE.md`](src/main/tags/CLAUDE.md) for the tag model, normalizer rule and matcher behaviour.
 
 ## What lives where in the vault
 
@@ -154,25 +95,24 @@ Seed re-application on upgrade is **strictly additive**: insert missing built-in
 
 - **Don't import `better-sqlite3` or `sharp` in the renderer** — they're native modules and only work in main. The renderer will compile fine and crash at runtime.
 - **Don't use `file://` URLs** for thumbnails — register a custom protocol (`recipe-thumb://<id>`) in main so the renderer's strict CSP and origin rules don't fight you.
-- **Don't block the main event loop** with synchronous OCR — use the `worker_threads` pool in `ocr/worker.ts`.
 - **Don't trust paths from the renderer**. Every IPC handler that takes a path validates it stays within the current vault root.
 - **Don't store user OCR-text edits as part of `ocr_text`** if you want "Re-run OCR" to be non-destructive — keep `ocr_text` (machine) separate from `notes` (human). Current schema follows this.
 - **Don't show alias surface forms in the UI.** The dropdown, the chips, the tag library — all display `tags.label`. Aliases are an implementation detail of matching. (See SPECS §3.4 FR-S2.)
 - **Don't write a second Russian normalizer.** Every code path that compares Russian text against the tag library must go through `src/main/tags/normalize.ts`. Duplicating the rules (a stemmer call here, a `ё→е` there) silently breaks recall.
-- **Reading order comes from layout regions, not word geometry.** `ocr/paddle/layout.ts` finds `text`/`title`/`image` regions, `readingOrder.ts` orders them (ported recursive XY-cut), `assemble.ts` drops each detected line into its region. Don't flatten this and rebuild columns from line boxes — an earlier design did that and glued adjacent columns.
-- **Detector input must be upscaled to a ≥1600px long side** (`detectionInputSize` in `paddle/detect.ts`). At 960 and 1280px the ~16px gutter between columns bridged into one wide box per row, whose centre fell outside every region and silently dropped the line. Don't "restore" the config.json `resize_long=960`.
-- **The recognizer is Cyrillic-only by construction** (`resources/eslav-dict.txt`); there is no language parameter. `recipes.ocr_lang` is written as the fixed `OCR_LANG` (`'ru'`). Latin look-alikes still appear in stylised text (`B coyce` for `в соусе`).
-- **Known OCR residue, deliberately not fixed:** stylised titles read with Latin look-alikes; `4оо` for `400` (Cyrillic о); bullets `•` are recognised but dropped by `tokenize` (single-character tokens).
-- **Don't port PaddleX's full `xycut_enhanced` wrapper.** `readingOrder.ts` ports only the core recursive cut — this app's layout labels are only `text`/`title`/`image`, with none of the header/footer/doc-title/footnote cases the wrapper handles. It rounds boxes at entry: layout output is fractional and unrounded boxes fall out of their own projection interval.
-- **Don't add `PP-DocBlockLayout` back as a second layout model.** `PP-DocLayout_plus-L` alone gives identical reading order on both fixtures; the other is 124 MB this app doesn't use.
-- **Don't change `blocks.ts` confidence handling to suit the new engine.** `assemble.ts` rescales the recognizer's 0–1 probabilities to the 0–100 scale `DEFAULT_MIN_CONFIDENCE` expects.
-- **Don't put OCR text repair in `tags/normalize.ts`.** De-hyphenation and line joining live in `src/main/ocr/postprocess.ts`, upstream of both display and matching, so the single-normalizer rule survives.
-- **Don't verify OCR changes with unit tests alone.** The former `layout.ts` and `postprocess.ts` each passed their own tests while their *composition* produced one run-on paragraph. `src/main/ocr/__tests__/reconstruction.test.ts` now exercises the real composition against recorded fixtures; run `npm run ocr:record` and re-check them after any change to detector sizing, layout, assembly, or the models.
 - **Don't assume a stem uniquely identifies a word.** `печень` (liver) and `печенье` (cookie) both stem to `печен`; `сладкий` and `сладкое` both to `сладк`. When a seed alias collides with a common word, move it to `exact_aliases` (matched verbatim) rather than deleting it.
 - **Migration v6 hard-deletes 13 builtin ingredient tags** (`garlic, carrot, tomato_paste, beet, fish, butter, oil, flour, sugar, rice, pasta, bread, dill`) instead of disabling them — a deliberate, one-off exception to the disable-don't-delete rule below, made at explicit user request with full awareness it destroys `recipe_tags` history for those tags on existing vaults. Картофель, Лук, Бекон, Петрушка, and Дрожжи were on the original candidate list too but were kept at explicit user request (across two rounds of follow-up) despite not being part of the curated 55-word list. Don't treat any of this as a new default: every other retirement (Соль, Соус, Чёрный перец, and any future one) should still disable, not delete.
 - **Don't re-add bare `перец`, bare `масло`, or a `Соль` tag to the seed.** All three were removed deliberately: unqualified `перец` means Чёрный перец (Болгарский перец requires `сладкий`/`болгарский`), unqualified `масло` matches nothing so it cannot swallow `оливковое масло`, and Соль appears in nearly every recipe so it carries no filtering value. See migration v3.
 - **Editing `resources/seed-tags.yaml` cannot remove anything from an existing vault.** The seed loader is additive by design, so deletions and alias re-assignments need a migration that disables the old `source='builtin'` rows. After a rules change, users must run **Retag all** in Settings for existing recipes to pick it up.
 - **Don't delete built-in tags or aliases on seed re-apply.** Only insert missing ones; respect `disabled` flags. User trust depends on this.
+
+## Testing
+
+- **Unit and e2e tests must be green before a PR is created.** `npm test -- --run` and `npm run test:e2e` run in the husky `pre-push` hook and block the push on any failure; run them yourself before opening a PR. Never bypass with `--no-verify`.
+- **E2E tests** live in `e2e/` and use Playwright's Electron API (`_electron.launch`) against the built app (`npm run test:e2e` builds first). Point them at a temp vault and temp `userData`, never the real one. Keep the suite to a few smoke flows.
+- `npm run coverage` runs Vitest with v8 coverage (report in `coverage/`, git-ignored).
+- **Project-wide coverage must be at least 70%** (statements, branches, functions, lines). Check the report before finishing; don't merge work that lowers it.
+- Renderer components, routes and stores are tested with **React Testing Library** (`@testing-library/react`, `user-event`). Opt each file into jsdom with a `// @vitest-environment jsdom` docblock; main-process tests stay on the default node environment.
+- Test the real handler or module, not a re-implementation of its SQL or logic.
 
 ## When making changes
 
@@ -182,26 +122,12 @@ Seed re-application on upgrade is **strictly additive**: insert missing built-in
 - Touching `tags/normalize.ts` → assume **every existing alias and recipe tag becomes stale**. Add a migration that re-normalizes `tag_aliases.lemma` and triggers a re-tag run, or leave the algorithm alone.
 - Adding to `resources/seed-tags.yaml` → add slug + canonical label + aliases (raw surface forms; the seed loader stems them). Pick a stable slug; aliases can change, slug cannot.
 
-## Status
+## OCR
 
-**Phase 2 complete.** Vault lifecycle is fully wired.
-
-- Cold start with no config → First Run screen (folder picker).
-- Pick empty folder → `vault.json` + `pictures/` + `thumbs/` created, config saved to `userData/config.json`, navigates to Gallery.
-- Restart → vault loaded from config, navigates directly to Gallery.
-- Pick existing Meal Planner folder → adopted cleanly (subdirs ensured, VaultInfo returned).
-- Gallery has a "Switch vault" link that re-opens the picker.
-
-All scripts pass: `typecheck`, `lint`, `build` (main 4.6 kB, preload 0.6 kB, renderer 781 kB + 10 kB CSS).
-
-OCR engine: tesseract.js was replaced by an `onnxruntime-node` PaddleOCR pipeline (2026-10); see `docs/superpowers/specs/2026-10-02-paddleocr-onnx-integration-design.md`.
-
-Next: **Phase 3** — DB schema, migrations, tag seed, reconciliation.
+See [`src/main/ocr/CLAUDE.md`](src/main/ocr/CLAUDE.md) for the engine, pipeline and pitfalls.
 
 ## Gotchas found in Phase 1
 
-- `@electron-toolkit/tsconfig/tsconfig.node.json` uses `moduleResolution: node` but `@tailwindcss/vite` ships `.d.mts`. Override with `"moduleResolution": "bundler"` in `tsconfig.node.json`. Already done.
-- `@electron-toolkit/eslint-config-ts` and `@electron-toolkit/eslint-config-prettier` are legacy `.eslintrc` format — not usable in ESLint 9 flat config. Replaced with `typescript-eslint` v8 meta-package + `eslint-plugin-react` + `eslint-plugin-react-hooks`. See `eslint.config.mjs`.
 - React 19 removed the global `JSX` namespace. Use `React.JSX.Element` for explicit return types (or omit the return type and let TypeScript infer). Already applied to `App.tsx`.
 
 ## Gotchas found in Phase 2

@@ -1,8 +1,9 @@
-import fs from 'fs/promises'
-import path from 'path'
-import yaml from 'js-yaml'
-import { app } from 'electron'
 import type Database from 'better-sqlite3'
+import { app } from 'electron'
+import fs from 'fs/promises'
+import yaml from 'js-yaml'
+import path from 'path'
+
 import { normalizeSurface } from './normalize'
 
 export interface SeedEntry {
@@ -36,7 +37,12 @@ export const seedFromEntries = (db: Database.Database, entries: SeedEntry[]): vo
 
   db.transaction(() => {
     for (const entry of entries) {
-      insertTag.run({ slug: entry.slug, label: entry.label, kind: entry.kind, createdAt: Date.now() })
+      insertTag.run({
+        slug: entry.slug,
+        label: entry.label,
+        kind: entry.kind,
+        createdAt: Date.now()
+      })
 
       const row = getTag.get(entry.slug)
       if (!row) continue

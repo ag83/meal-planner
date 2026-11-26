@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+
 import type { TagSuggestion } from '../../../shared/types'
 
 interface TagFilterState {

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import { vault } from '../lib/ipc'
 
 const Root = (): React.JSX.Element => {

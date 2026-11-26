@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { runMigrations } from '../migrations'
 
 let db: Database.Database
@@ -41,8 +42,9 @@ describe('runMigrations', () => {
     db.prepare(
       `INSERT INTO tags (slug, label, kind, source, created_at) VALUES ('t1','T','ingredient','builtin',1)`
     ).run()
-    const tagId = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('t1')!
-      .id
+    const tagId = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('t1')!.id
     db.prepare(
       `INSERT INTO tag_aliases (tag_id, lemma, is_primary, source) VALUES (?,'лемма',1,'builtin')`
     ).run(tagId)
@@ -55,8 +57,9 @@ describe('runMigrations', () => {
     db.prepare(
       `INSERT INTO tags (slug, label, kind, source, created_at) VALUES ('t1','T','ingredient','builtin',1)`
     ).run()
-    const tagId = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('t1')!
-      .id
+    const tagId = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('t1')!.id
     expect(() => {
       db.prepare(
         `INSERT INTO tag_aliases (tag_id, lemma, is_primary, source, match_mode) VALUES (?,'лемма',1,'builtin','bogus')`
@@ -87,9 +90,10 @@ describe('runMigrations', () => {
     runMigrations(db)
 
     const row = db
-      .prepare<[], { lemma: string; match_mode: string }>(
-        'SELECT lemma, match_mode FROM tag_aliases'
-      )
+      .prepare<
+        [],
+        { lemma: string; match_mode: string }
+      >('SELECT lemma, match_mode FROM tag_aliases')
       .get()
     expect(row?.lemma).toBe('старая лемма')
     expect(row?.match_mode).toBe('stem')
@@ -126,15 +130,15 @@ describe('runMigrations', () => {
     db.prepare(
       `INSERT INTO tags (slug, label, kind, source, created_at) VALUES ('t1','T','ingredient','builtin',1)`
     ).run()
-    const tagRow = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('t1')!
+    const tagRow = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('t1')!
     db.prepare(
       `INSERT INTO recipe_tags (recipe_id, tag_id, confidence, source) VALUES ('r1',${tagRow.id},1.0,'user')`
     ).run()
 
     db.prepare('DELETE FROM recipes WHERE id=?').run('r1')
-    const count = db
-      .prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM recipe_tags')
-      .get()!.n
+    const count = db.prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM recipe_tags').get()!.n
     expect(count).toBe(0)
   })
 })
@@ -167,9 +171,10 @@ describe('v2 → v3 tag rule corrections', () => {
 
   const isDisabled = (slug: string, lemma: string): number =>
     db
-      .prepare<[string, string], { disabled: number }>(
-        'SELECT disabled FROM tag_aliases WHERE lemma=? AND tag_id=(SELECT id FROM tags WHERE slug=?)'
-      )
+      .prepare<
+        [string, string],
+        { disabled: number }
+      >('SELECT disabled FROM tag_aliases WHERE lemma=? AND tag_id=(SELECT id FROM tags WHERE slug=?)')
       .get(lemma, slug)!.disabled
 
   it('disables the bare перец alias on Болгарский перец', () => {
@@ -273,8 +278,9 @@ describe('v3 → v4 disables the Соус tag', () => {
     db.prepare(
       `INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('sauce','Соус','dish_type','builtin',1)`
     ).run()
-    const id = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('sauce')!
-      .id
+    const id = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('sauce')!.id
     const insertAlias = db.prepare(
       `INSERT INTO tag_aliases (tag_id,lemma,is_primary,source,match_mode) VALUES (?,?,0,?, 'stem')`
     )
@@ -284,9 +290,10 @@ describe('v3 → v4 disables the Соус tag', () => {
     runMigrations(db)
 
     const aliases = db
-      .prepare<[number], { lemma: string; disabled: number }>(
-        'SELECT lemma, disabled FROM tag_aliases WHERE tag_id=?'
-      )
+      .prepare<
+        [number],
+        { lemma: string; disabled: number }
+      >('SELECT lemma, disabled FROM tag_aliases WHERE tag_id=?')
       .all(id)
     expect(aliases.every((a) => a.disabled === 1)).toBe(true)
     const tag = db
@@ -301,8 +308,9 @@ describe('v3 → v4 disables the Соус tag', () => {
     db.prepare(
       `INSERT INTO tags (slug,label,kind,source,created_at) VALUES ('sauce','Соус','dish_type','builtin',1)`
     ).run()
-    const id = db.prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?').get('sauce')!
-      .id
+    const id = db
+      .prepare<[string], { id: number }>('SELECT id FROM tags WHERE slug=?')
+      .get('sauce')!.id
     db.prepare(
       `INSERT INTO tag_aliases (tag_id,lemma,is_primary,source,match_mode) VALUES (?,'мойсоус',0,'user','stem')`
     ).run(id)
@@ -310,9 +318,10 @@ describe('v3 → v4 disables the Соус tag', () => {
     runMigrations(db)
 
     const mine = db
-      .prepare<[number], { disabled: number }>(
-        `SELECT disabled FROM tag_aliases WHERE tag_id=? AND lemma='мойсоус'`
-      )
+      .prepare<
+        [number],
+        { disabled: number }
+      >(`SELECT disabled FROM tag_aliases WHERE tag_id=? AND lemma='мойсоус'`)
       .get(id)
     expect(mine?.disabled).toBe(0)
   })
@@ -358,8 +367,19 @@ describe('v5 → v6 recreates the ingredient tag catalog', () => {
     runMigrations(db)
     db.pragma('user_version = 5')
     const retired = [
-      'garlic', 'carrot', 'tomato_paste', 'beet', 'fish',
-      'butter', 'oil', 'flour', 'sugar', 'rice', 'pasta', 'bread', 'dill'
+      'garlic',
+      'carrot',
+      'tomato_paste',
+      'beet',
+      'fish',
+      'butter',
+      'oil',
+      'flour',
+      'sugar',
+      'rice',
+      'pasta',
+      'bread',
+      'dill'
     ]
     const kept = ['potato', 'onion', 'bacon', 'parsley', 'yeast']
     const insertTag = db.prepare(

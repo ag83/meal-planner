@@ -2,14 +2,23 @@
 // Wipes the active vault's database and all recipe images/thumbnails.
 // Reads the vault path from userData/config.json — the same source Electron uses.
 import fs from 'fs'
-import path from 'path'
 import os from 'os'
+import path from 'path'
 
-function getUserDataPath() {
+const getUserDataPath = () => {
   switch (process.platform) {
-    case 'win32': return path.join(process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'), 'meal-planner')
-    case 'darwin': return path.join(os.homedir(), 'Library', 'Application Support', 'meal-planner')
-    default: return path.join(process.env.XDG_CONFIG_HOME ?? path.join(os.homedir(), '.config'), 'meal-planner')
+    case 'win32':
+      return path.join(
+        process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'),
+        'meal-planner'
+      )
+    case 'darwin':
+      return path.join(os.homedir(), 'Library', 'Application Support', 'meal-planner')
+    default:
+      return path.join(
+        process.env.XDG_CONFIG_HOME ?? path.join(os.homedir(), '.config'),
+        'meal-planner'
+      )
   }
 }
 
@@ -34,7 +43,12 @@ console.log(`Vault: ${vaultPath}`)
 // Delete SQLite DB + WAL/SHM sidecar files
 for (const suffix of ['', '-wal', '-shm']) {
   const f = path.join(vaultPath, `meal-planner.db${suffix}`)
-  try { fs.rmSync(f); console.log(`  deleted ${path.basename(f)}`) } catch { /* absent = fine */ }
+  try {
+    fs.rmSync(f)
+    console.log(`  deleted ${path.basename(f)}`)
+  } catch {
+    /* absent = fine */
+  }
 }
 
 // Clear pictures/ and thumbs/ directories (keep the dirs)

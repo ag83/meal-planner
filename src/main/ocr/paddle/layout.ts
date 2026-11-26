@@ -1,7 +1,8 @@
-import { rawSharp } from './image'
-import type { PreparedImage } from './image'
 import type { InferenceSession } from 'onnxruntime-node'
 import { Tensor } from 'onnxruntime-node'
+
+import type { PreparedImage } from './image'
+import { rawSharp } from './image'
 
 export const LAYOUT_INPUT_SIZE = 800
 
@@ -44,7 +45,11 @@ export interface LayoutRegion {
   label: 'text' | 'title' | 'image'
 }
 
-export const decodeLayout = (rows: Float32Array, numRows: number, threshold = 0.5): LayoutRegion[] => {
+export const decodeLayout = (
+  rows: Float32Array,
+  numRows: number,
+  threshold = 0.5
+): LayoutRegion[] => {
   const regions: LayoutRegion[] = []
 
   for (let i = 0; i < numRows; i++) {
@@ -69,7 +74,10 @@ export const decodeLayout = (rows: Float32Array, numRows: number, threshold = 0.
   return regions
 }
 
-export const runLayout = async (session: InferenceSession, image: PreparedImage): Promise<LayoutRegion[]> => {
+export const runLayout = async (
+  session: InferenceSession,
+  image: PreparedImage
+): Promise<LayoutRegion[]> => {
   const originalWidth = image.width
   const originalHeight = image.height
 
@@ -89,7 +97,11 @@ export const runLayout = async (session: InferenceSession, image: PreparedImage)
 
   const feeds = {
     image: new Tensor('float32', imageTensorData, [1, 3, LAYOUT_INPUT_SIZE, LAYOUT_INPUT_SIZE]),
-    im_shape: new Tensor('float32', new Float32Array([LAYOUT_INPUT_SIZE, LAYOUT_INPUT_SIZE]), [1, 2]),
+    im_shape: new Tensor(
+      'float32',
+      new Float32Array([LAYOUT_INPUT_SIZE, LAYOUT_INPUT_SIZE]),
+      [1, 2]
+    ),
     scale_factor: new Tensor(
       'float32',
       new Float32Array([LAYOUT_INPUT_SIZE / originalHeight, LAYOUT_INPUT_SIZE / originalWidth]),

@@ -1,9 +1,10 @@
 import { ipcMain, shell } from 'electron'
+import { app } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
-import { app } from 'electron'
+
+import type { AppTheme, Settings } from '../../shared/types'
 import { vaultManager } from '../vault/manager'
-import type { Settings, AppTheme } from '../../shared/types'
 
 const DEFAULTS: Settings = {
   theme: 'system'

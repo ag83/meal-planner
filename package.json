@@ -19,7 +19,12 @@
     "pretest": "npm rebuild better-sqlite3",
     "posttest": "electron-rebuild -f -w better-sqlite3,sharp",
     "rebuild:electron": "electron-rebuild -f -w better-sqlite3,sharp",
-    "clear-data": "node scripts/clear-data.mjs"
+    "clear-data": "node scripts/clear-data.mjs",
+    "prepare": "husky",
+    "coverage": "vitest run --coverage",
+    "test:e2e": "electron-vite build && playwright test --pass-with-no-tests",
+    "precoverage": "npm rebuild better-sqlite3",
+    "postcoverage": "electron-rebuild -f -w better-sqlite3,sharp"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^3.0.0",
@@ -38,19 +43,28 @@
     "@electron-toolkit/eslint-config-ts": "^2.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@electron/rebuild": "^3.7.2",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/vite": "^4.0.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.13",
     "@types/better-sqlite3": "^7.6.13",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.9",
     "electron": "^34.0.0",
     "electron-builder": "^25.1.8",
     "electron-vite": "^3.0.0",
     "eslint": "^9.17.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
+    "husky": "^9.1.7",
+    "jsdom": "^29.1.1",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.4.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -84,6 +98,15 @@
         "from": "resources/seed-tags.yaml",
         "to": "seed-tags.yaml"
       }
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix --max-warnings=0 --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{json,css,md,yaml,yml,html}": [
+      "prettier --write"
     ]
   }
 }

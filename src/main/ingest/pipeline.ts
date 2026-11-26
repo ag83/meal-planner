@@ -1,12 +1,13 @@
+import type Database from 'better-sqlite3'
+import crypto from 'crypto'
 import fs from 'fs/promises'
 import path from 'path'
-import crypto from 'crypto'
-import type Database from 'better-sqlite3'
+
+import type { IngestProgress } from '../../shared/types'
+import { OCR_LANG, runOcr } from '../ocr/worker'
 import { hashFile } from '../services/hasher'
 import { makeThumbnail } from '../services/thumbnailer'
-import { runOcr, OCR_LANG } from '../ocr/worker'
 import { extractTags } from '../tags/matcher'
-import type { IngestProgress } from '../../shared/types'
 
 export type { IngestProgress }
 export type ProgressCallback = (p: IngestProgress) => void
@@ -38,7 +39,9 @@ export const ingestFile = async (
     return
   }
 
-  const dup = db.prepare<[string], { id: string }>('SELECT id FROM recipes WHERE sha256 = ?').get(sha256)
+  const dup = db
+    .prepare<[string], { id: string }>('SELECT id FROM recipes WHERE sha256 = ?')
+    .get(sha256)
   if (dup) {
     onProgress({ filePath: srcPath, status: 'duplicate', recipeId: dup.id })
     return
@@ -91,10 +94,12 @@ export const ingestFile = async (
 
   const now = Date.now()
   db.transaction(() => {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO recipes (id, ext, sha256, width, height, bytes, ocr_lang, ocr_text, ocr_conf, created_at, updated_at)
       VALUES (@id, @ext, @sha256, @width, @height, @bytes, @ocrLang, @ocrText, @ocrConf, @now, @now)
-    `).run({ id, ext, sha256, width, height, bytes, ocrLang, ocrText, ocrConf, now })
+    `
+    ).run({ id, ext, sha256, width, height, bytes, ocrLang, ocrText, ocrConf, now })
 
     const insertTag = db.prepare(
       "INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id, confidence, source) VALUES (@recipeId, @tagId, @confidence, 'ocr')"

@@ -1,19 +1,21 @@
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
-import { ipcMain, dialog, BrowserWindow } from 'electron'
-import { getDb } from '../db/connection'
-import { vaultManager } from '../vault/manager'
-import { ingestFile } from '../ingest/pipeline'
-import { runOcr, OCR_LANG } from '../ocr/worker'
-import { extractTags } from '../tags/matcher'
+
 import type { IngestProgress } from '../../shared/types'
+import { getDb } from '../db/connection'
+import { ingestFile } from '../ingest/pipeline'
+import { OCR_LANG, runOcr } from '../ocr/worker'
+import { extractTags } from '../tags/matcher'
+import { vaultManager } from '../vault/manager'
 
 export const registerRecipeHandlers = (): void => {
   ipcMain.handle('recipes:list', () => {
     if (!vaultManager.getCurrent()) return []
     const db = getDb()
     return db
-      .prepare(`
+      .prepare(
+        `
         SELECT r.id, r.ext, r.title,
                r.width, r.height,
                r.created_at AS createdAt,
@@ -23,7 +25,8 @@ export const registerRecipeHandlers = (): void => {
         WHERE r.missing = 0
         GROUP BY r.id
         ORDER BY r.created_at DESC
-      `)
+      `
+      )
       .all()
   })
 
@@ -110,18 +113,20 @@ export const registerRecipeHandlers = (): void => {
     const db = getDb()
     if (on) {
       db.transaction(() => {
-        db.prepare(
-          'DELETE FROM recipe_tag_suppressions WHERE recipe_id = ? AND tag_id = ?'
-        ).run(id, tagId)
+        db.prepare('DELETE FROM recipe_tag_suppressions WHERE recipe_id = ? AND tag_id = ?').run(
+          id,
+          tagId
+        )
         db.prepare(
           "INSERT OR REPLACE INTO recipe_tags (recipe_id,tag_id,confidence,source) VALUES (?,?,1.0,'user')"
         ).run(id, tagId)
       })()
     } else {
       const existing = db
-        .prepare<[string, number], { source: string }>(
-          'SELECT source FROM recipe_tags WHERE recipe_id = ? AND tag_id = ?'
-        )
+        .prepare<
+          [string, number],
+          { source: string }
+        >('SELECT source FROM recipe_tags WHERE recipe_id = ? AND tag_id = ?')
         .get(id, tagId)
       db.transaction(() => {
         if (existing?.source === 'ocr') {

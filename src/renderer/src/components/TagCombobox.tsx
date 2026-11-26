@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+
+import type { TagKind, TagSuggestion } from '../../../shared/types'
 import { tags as tagsIpc } from '../lib/ipc'
-import type { TagSuggestion, TagKind } from '../../../shared/types'
 
 // ── Debounce ────────────────────────────────────────────────────────────────
 

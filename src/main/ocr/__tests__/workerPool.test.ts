@@ -1,6 +1,7 @@
-import { describe, it, expect, afterEach } from 'vitest'
-import { createWorkerPool } from '../workerPool'
+import { afterEach, describe, expect, it } from 'vitest'
+
 import type { WorkerPool } from '../workerPool'
+import { createWorkerPool } from '../workerPool'
 
 const WORKER_SOURCE = `
 import { parentPort } from 'worker_threads'

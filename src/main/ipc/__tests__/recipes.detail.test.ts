@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { runMigrations } from '../../db/migrations'
-import { seedFromEntries } from '../../tags/seed'
 import type { SeedEntry } from '../../tags/seed'
+import { seedFromEntries } from '../../tags/seed'
 
 let db: Database.Database
 
@@ -35,16 +36,17 @@ const tagRecipe = (recipeId: string, tId: number, source: 'ocr' | 'user' = 'ocr'
 }
 
 const suppress = (recipeId: string, tId: number): void => {
-  db.prepare(
-    'INSERT OR IGNORE INTO recipe_tag_suppressions (recipe_id,tag_id) VALUES (?,?)'
-  ).run(recipeId, tId)
+  db.prepare('INSERT OR IGNORE INTO recipe_tag_suppressions (recipe_id,tag_id) VALUES (?,?)').run(
+    recipeId,
+    tId
+  )
 }
 
 // Mirror of the get query in ipc/recipes.ts
 const getRecipe = (id: string): { id: string; title: string | null; tags: unknown[] } | null => {
-  const recipe = db
-    .prepare('SELECT id, title, notes FROM recipes WHERE id=?')
-    .get(id) as { id: string; title: string | null; notes: string | null } | undefined
+  const recipe = db.prepare('SELECT id, title, notes FROM recipes WHERE id=?').get(id) as
+    | { id: string; title: string | null; notes: string | null }
+    | undefined
   if (!recipe) return null
   const tags = db
     .prepare(
@@ -60,18 +62,20 @@ const getRecipe = (id: string): { id: string; title: string | null; tags: unknow
 const setTag = (recipeId: string, tId: number, on: boolean): void => {
   if (on) {
     db.transaction(() => {
-      db.prepare(
-        'DELETE FROM recipe_tag_suppressions WHERE recipe_id=? AND tag_id=?'
-      ).run(recipeId, tId)
+      db.prepare('DELETE FROM recipe_tag_suppressions WHERE recipe_id=? AND tag_id=?').run(
+        recipeId,
+        tId
+      )
       db.prepare(
         "INSERT OR REPLACE INTO recipe_tags (recipe_id,tag_id,confidence,source) VALUES (?,?,1.0,'user')"
       ).run(recipeId, tId)
     })()
   } else {
     const existing = db
-      .prepare<[string, number], { source: string }>(
-        'SELECT source FROM recipe_tags WHERE recipe_id=? AND tag_id=?'
-      )
+      .prepare<
+        [string, number],
+        { source: string }
+      >('SELECT source FROM recipe_tags WHERE recipe_id=? AND tag_id=?')
       .get(recipeId, tId)
     db.transaction(() => {
       if (existing?.source === 'ocr') {
@@ -272,9 +276,9 @@ describe('reOcr tag-replacement logic', () => {
   it('replaces existing OCR tags with new matches', () => {
     tagRecipe('r1', tagId('tomato'), 'ocr')
     applyReOcrTags('r1', 'some text', [{ tagId: tagId('basil'), confidence: 1.0 }])
-    const tags = db
-      .prepare('SELECT tag_id FROM recipe_tags WHERE recipe_id=?')
-      .all('r1') as { tag_id: number }[]
+    const tags = db.prepare('SELECT tag_id FROM recipe_tags WHERE recipe_id=?').all('r1') as {
+      tag_id: number
+    }[]
     expect(tags.map((t) => t.tag_id)).toContain(tagId('basil'))
     expect(tags.map((t) => t.tag_id)).not.toContain(tagId('tomato'))
   })
@@ -326,9 +330,7 @@ describe('recipes:delete (cascade)', () => {
   it('cascades to recipe_tag_suppressions', () => {
     suppress('r1', tagId('tomato'))
     db.prepare('DELETE FROM recipes WHERE id=?').run('r1')
-    const rows = db
-      .prepare('SELECT 1 FROM recipe_tag_suppressions WHERE recipe_id=?')
-      .all('r1')
+    const rows = db.prepare('SELECT 1 FROM recipe_tag_suppressions WHERE recipe_id=?').all('r1')
     expect(rows).toHaveLength(0)
   })
 })

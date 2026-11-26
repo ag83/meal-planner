@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { runMigrations } from '../../db/migrations'
-import { seedFromEntries } from '../../tags/seed'
 import { normalizeTokens } from '../../tags/normalize'
 import type { SeedEntry } from '../../tags/seed'
+import { seedFromEntries } from '../../tags/seed'
 
 let db: Database.Database
 
@@ -107,9 +108,7 @@ describe('tags:suggest query', () => {
   })
 
   it('does not return results from disabled aliases', () => {
-    db.prepare(
-      "UPDATE tag_aliases SET disabled = 1 WHERE lemma LIKE 'томат%'"
-    ).run()
+    db.prepare("UPDATE tag_aliases SET disabled = 1 WHERE lemma LIKE 'томат%'").run()
     const results = suggestTags('томат')
     const labels = results.map((r) => r.label)
     expect(labels).not.toContain('Помидор')

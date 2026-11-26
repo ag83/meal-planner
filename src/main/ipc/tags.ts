@@ -1,8 +1,9 @@
 import { ipcMain } from 'electron'
+
 import { getDb } from '../db/connection'
-import { vaultManager } from '../vault/manager'
-import { normalizeTokens } from '../tags/normalize'
 import { extractTags } from '../tags/matcher'
+import { normalizeTokens } from '../tags/normalize'
+import { vaultManager } from '../vault/manager'
 
 const toSlug = (label: string): string => {
   const base = label
@@ -115,7 +116,11 @@ export const registerTagHandlers = (): void => {
 
   ipcMain.handle('tags:create', (_event, input: unknown) => {
     if (!input || typeof input !== 'object') throw new Error('Invalid input')
-    const { label, kind, aliases = [] } = input as {
+    const {
+      label,
+      kind,
+      aliases = []
+    } = input as {
       label: string
       kind: string
       aliases?: string[]
@@ -194,9 +199,10 @@ export const registerTagHandlers = (): void => {
     if (!lemma) throw new Error('Alias normalizes to empty string')
 
     const existing = db
-      .prepare<[string], { tag_id: number }>(
-        'SELECT tag_id FROM tag_aliases WHERE lemma=? AND disabled=0 LIMIT 1'
-      )
+      .prepare<
+        [string],
+        { tag_id: number }
+      >('SELECT tag_id FROM tag_aliases WHERE lemma=? AND disabled=0 LIMIT 1')
       .get(lemma)
     if (existing && existing.tag_id !== tagId) {
       throw new Error('This alias is already assigned to another tag')
@@ -213,9 +219,10 @@ export const registerTagHandlers = (): void => {
     if (typeof aliasId !== 'number') throw new Error('Invalid alias id')
     const db = getDb()
     const row = db
-      .prepare<[number], { source: string; is_primary: number }>(
-        'SELECT source, is_primary FROM tag_aliases WHERE id=?'
-      )
+      .prepare<
+        [number],
+        { source: string; is_primary: number }
+      >('SELECT source, is_primary FROM tag_aliases WHERE id=?')
       .get(aliasId)
     if (!row) return
     if (row.is_primary) throw new Error('Cannot remove the primary alias')
@@ -251,17 +258,16 @@ export const registerTagHandlers = (): void => {
     const db = getDb()
 
     const allRecipes = db
-      .prepare<[], { id: string; ocr_text: string | null }>(
-        'SELECT id, ocr_text FROM recipes WHERE ocr_text IS NOT NULL'
-      )
+      .prepare<
+        [],
+        { id: string; ocr_text: string | null }
+      >('SELECT id, ocr_text FROM recipes WHERE ocr_text IS NOT NULL')
       .all()
 
     let updated = 0
 
     db.transaction(() => {
-      const deleteOcr = db.prepare(
-        "DELETE FROM recipe_tags WHERE recipe_id=? AND source='ocr'"
-      )
+      const deleteOcr = db.prepare("DELETE FROM recipe_tags WHERE recipe_id=? AND source='ocr'")
       const isSuppressed = db.prepare<[string, number], { n: number }>(
         'SELECT 1 AS n FROM recipe_tag_suppressions WHERE recipe_id=? AND tag_id=?'
       )

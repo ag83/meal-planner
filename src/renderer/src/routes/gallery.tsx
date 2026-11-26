@@ -1,17 +1,12 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  useCallback
-} from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { vault, recipes } from '../lib/ipc'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+
+import type { IngestProgress, IngestStatus, RecipeSummary } from '../../../shared/types'
+import { TagCombobox } from '../components/TagCombobox'
+import { recipes, vault } from '../lib/ipc'
 import { useRecipesStore } from '../stores/useRecipesStore'
 import { useTagFilterStore } from '../stores/useTagFilterStore'
-import { TagCombobox } from '../components/TagCombobox'
-import type { IngestProgress, IngestStatus, RecipeSummary } from '../../../shared/types'
 
 // Electron sets `.path` on File objects from drag-and-drop
 interface ElectronFile extends File {
@@ -173,9 +168,7 @@ const Gallery = (): React.JSX.Element => {
           ...p,
           fileName: p.filePath.split(/[/\\]/).pop() ?? p.filePath
         }
-        return idx >= 0
-          ? prev.map((x, i) => (i === idx ? item : x))
-          : [...prev, item]
+        return idx >= 0 ? prev.map((x, i) => (i === idx ? item : x)) : [...prev, item]
       })
     })
   }, [])
@@ -414,9 +407,7 @@ const Gallery = (): React.JSX.Element => {
 
           {/* Virtualized grid */}
           {!isLoading && sortedItems.length > 0 && (
-            <div
-              style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}
-            >
+            <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
               {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const start = virtualRow.index * cols
                 return (
@@ -466,14 +457,8 @@ const Gallery = (): React.JSX.Element => {
             </div>
             <ul className="max-h-56 divide-y divide-stone-50 overflow-y-auto">
               {progressItems.map((item) => (
-                <li
-                  key={item.filePath}
-                  className="flex items-center justify-between px-4 py-1.5"
-                >
-                  <span
-                    className="truncate text-xs text-stone-700"
-                    title={item.filePath}
-                  >
+                <li key={item.filePath} className="flex items-center justify-between px-4 py-1.5">
+                  <span className="truncate text-xs text-stone-700" title={item.filePath}>
                     {item.fileName}
                   </span>
                   <span

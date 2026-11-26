@@ -1,9 +1,10 @@
-import { rawSharp } from './image'
-import type { PreparedImage } from './image'
 import type { InferenceSession } from 'onnxruntime-node'
 import { Tensor } from 'onnxruntime-node'
-import { rgbaToChwFloat32 } from './tensor'
+
 import { findConnectedComponents } from './connectedComponents'
+import type { PreparedImage } from './image'
+import { rawSharp } from './image'
+import { rgbaToChwFloat32 } from './tensor'
 
 // Measured, not taken from config.json's resize_long=960: on a 1279px three-column page the
 // ~16px gutters bridged into single boxes at 960 and 1280 and separated cleanly at 1600+.
@@ -102,7 +103,10 @@ export const decodeDetection = (
   return boxes
 }
 
-export const detectionInputSize = (width: number, height: number): { width: number; height: number } => {
+export const detectionInputSize = (
+  width: number,
+  height: number
+): { width: number; height: number } => {
   const longSide = Math.max(width, height)
   const scale = Math.min(Math.max(DET_MIN_LONG_SIDE / longSide, 1), DET_MAX_LONG_SIDE / longSide)
   return { width: roundToMultipleOf32(width * scale), height: roundToMultipleOf32(height * scale) }
@@ -110,10 +114,19 @@ export const detectionInputSize = (width: number, height: number): { width: numb
 
 export const preprocessForDetection = async (
   image: PreparedImage
-): Promise<{ tensorData: Float32Array; width: number; height: number; ratioW: number; ratioH: number }> => {
+): Promise<{
+  tensorData: Float32Array
+  width: number
+  height: number
+  ratioW: number
+  ratioH: number
+}> => {
   const originalWidth = image.width
   const originalHeight = image.height
-  const { width: resizedWidth, height: resizedHeight } = detectionInputSize(originalWidth, originalHeight)
+  const { width: resizedWidth, height: resizedHeight } = detectionInputSize(
+    originalWidth,
+    originalHeight
+  )
 
   const { data } = await rawSharp(image)
     .resize(resizedWidth, resizedHeight, { fit: 'fill' })
@@ -131,7 +144,10 @@ export const preprocessForDetection = async (
   }
 }
 
-export const runDetection = async (session: InferenceSession, image: PreparedImage): Promise<DetectedBox[]> => {
+export const runDetection = async (
+  session: InferenceSession,
+  image: PreparedImage
+): Promise<DetectedBox[]> => {
   const { tensorData, width, height, ratioW, ratioH } = await preprocessForDetection(image)
   const inputName = session.inputNames[0]
   const feeds = { [inputName]: new Tensor('float32', tensorData, [1, 3, height, width]) }

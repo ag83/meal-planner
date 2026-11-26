@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import fs from 'fs'
-import path from 'path'
-import yaml from 'js-yaml'
 import Database from 'better-sqlite3'
+import fs from 'fs'
+import yaml from 'js-yaml'
+import path from 'path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { runMigrations } from '../../db/migrations'
-import { seedFromEntries } from '../seed'
 import { extractTags } from '../matcher'
 import type { SeedEntry } from '../seed'
+import { seedFromEntries } from '../seed'
 
 // Exercises the shipped tag rules end to end on a fresh vault: real seed-tags.yaml
 // through the real matcher.
@@ -33,9 +34,9 @@ const labelsFor = (text: string): string[] => {
 
 describe('shipped tag rules', () => {
   it('has no Соль tag at all', () => {
-    const row = db.prepare<[], { n: number }>(
-      `SELECT COUNT(*) AS n FROM tags WHERE slug = 'salt'`
-    ).get()
+    const row = db
+      .prepare<[], { n: number }>(`SELECT COUNT(*) AS n FROM tags WHERE slug = 'salt'`)
+      .get()
     expect(row?.n).toBe(0)
   })
 
@@ -180,8 +181,19 @@ describe('фасоль, фарш and бекон', () => {
 describe('recreated ingredient catalog (v6)', () => {
   it('has none of the 13 retired ingredient tags', () => {
     const retired = [
-      'garlic', 'carrot', 'tomato_paste', 'beet', 'fish',
-      'butter', 'oil', 'flour', 'sugar', 'rice', 'pasta', 'bread', 'dill'
+      'garlic',
+      'carrot',
+      'tomato_paste',
+      'beet',
+      'fish',
+      'butter',
+      'oil',
+      'flour',
+      'sugar',
+      'rice',
+      'pasta',
+      'bread',
+      'dill'
     ]
     const slugs = db
       .prepare<[], { slug: string }>('SELECT slug FROM tags')

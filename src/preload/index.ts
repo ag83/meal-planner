@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+
 import type { IngestProgress } from '../shared/types'
 
 const api: Window['api'] = {
@@ -28,8 +29,7 @@ const api: Window['api'] = {
     }
   },
   tags: {
-    suggest: (prefix: string, limit?: number) =>
-      ipcRenderer.invoke('tags:suggest', prefix, limit),
+    suggest: (prefix: string, limit?: number) => ipcRenderer.invoke('tags:suggest', prefix, limit),
     list: (kind?) => ipcRenderer.invoke('tags:list', kind),
     create: (input) => ipcRenderer.invoke('tags:create', input),
     update: (id, patch) => ipcRenderer.invoke('tags:update', id, patch),
